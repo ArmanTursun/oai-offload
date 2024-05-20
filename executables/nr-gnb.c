@@ -369,10 +369,18 @@ void init_gNB_Tpool(int inst) {
   // PUSCH symbols per thread need to be calculated by how many threads we have
   gNB->num_pusch_symbols_per_thread = 1;
   // ULSCH decoding threadpool
+  //initTpool("-1,-1,-1,-1", &gNB->threadPool, cpumeas(CPUMEAS_GETSTATE));
   initTpool(get_softmodem_params()->threadPoolConfig, &gNB->threadPool, cpumeas(CPUMEAS_GETSTATE));
+  //initTpool("-1,-1,-1", &gNB->threadPool_LDPC_de, cpumeas(CPUMEAS_GETSTATE));
   // ULSCH decoder result FIFO
   initNotifiedFIFO(&gNB->respPuschSymb);
   initNotifiedFIFO(&gNB->respDecode);
+  initNotifiedFIFO(&gNB->respDecode_pre);
+  initNotifiedFIFO(&gNB->respDecode_post);
+  //initNotifiedFIFO(&gNB->respDecode_pre_1);
+  //initNotifiedFIFO(&gNB->respDecode_post_1);
+  //initNotifiedFIFO(&gNB->respDecode_pre_2);
+  //initNotifiedFIFO(&gNB->respDecode_post_2);
 
   // L1 RX result FIFO
   initNotifiedFIFO(&gNB->resp_L1);
@@ -404,7 +412,14 @@ void init_gNB_Tpool(int inst) {
 void term_gNB_Tpool(int inst) {
   PHY_VARS_gNB *gNB = RC.gNB[inst];
   abortTpool(&gNB->threadPool);
+  //abortTpool(&gNB->threadPool_LDPC_de);
   abortNotifiedFIFO(&gNB->respDecode);
+  abortNotifiedFIFO(&gNB->respDecode_pre);
+  abortNotifiedFIFO(&gNB->respDecode_post);
+  //abortNotifiedFIFO(&gNB->respDecode_pre_1);
+  //abortNotifiedFIFO(&gNB->respDecode_post_1);
+  //abortNotifiedFIFO(&gNB->respDecode_pre_2);
+  //abortNotifiedFIFO(&gNB->respDecode_post_2);
   abortNotifiedFIFO(&gNB->resp_L1);
   abortNotifiedFIFO(&gNB->L1_tx_free);
   abortNotifiedFIFO(&gNB->L1_tx_filled);
@@ -487,7 +502,8 @@ void init_eNB_afterRU(void) {
 
 }
 
-void init_gNB(int single_thread_flag,int wait_for_sync) {
+//void init_gNB(int single_thread_flag,int wait_for_sync) {
+void init_gNB(int single_thread_flag,int wait_for_sync, void* wrapper_gnb, int instance_id_gnb) {
 
   int inst;
   PHY_VARS_gNB *gNB;
@@ -531,6 +547,9 @@ void init_gNB(int single_thread_flag,int wait_for_sync) {
     gNB->prach_energy_counter = 0;
     gNB->chest_time = get_softmodem_params()->chest_time;
     gNB->chest_freq = get_softmodem_params()->chest_freq;
+    gNB->wrapper_gnb = wrapper_gnb;
+    gNB->instance_id_gnb = instance_id_gnb;
+    gNB->sc_idx = 12;
 
   }
   

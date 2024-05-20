@@ -173,6 +173,12 @@ else
         }
       }
 
+      //for (int i = 0; i < 4; i++) printf("test_input[i]=%hhu \n",output_buffers[r][i]);
+      if (BG==1){
+      	for (int aa = 0; aa < Kprime>>3; aa++){
+    	  output_buffers[r][aa] = reverseBits_rfnoc(output_buffers[r][aa]);
+      	}
+      }
     }
   }
 

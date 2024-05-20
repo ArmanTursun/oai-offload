@@ -910,8 +910,36 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
         totalDecode += tasks_added; 
 
       VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_NR_ULSCH_PROCEDURES_RX, 0);
+      
+      nfapi_nr_pusch_pdu_t *pusch_pdu = &gNB->ulsch[ULSCH_id].harq_process->ulsch_pdu;
+      int bg = pusch_pdu->maintenance_parms_v3.ldpcBaseGraph;
+      //int decode_num = 0;
+      while (totalDecode > 0) {
+          notifiedFIFO_elt_t *req = NULL;
+          if (bg == 1){
+          //if (false){
+              //if (gNB->nbDecode_1 > 0){
+              //    req = pullTpool(&gNB->respDecode_post_1, &gNB->threadPool_LDPC_de);
+              //    gNB->nbDecode_1--;
+              //} else if (gNB->nbDecode_2 > 0){
+              //    req = pullTpool(&gNB->respDecode_post_2, &gNB->threadPool_LDPC_de);
+              //    gNB->nbDecode_2--;
+              //}
+              req = pullTpool(&gNB->respDecode_post, &gNB->threadPool);
+          } else {
+              req = pullTpool(&gNB->respDecode, &gNB->threadPool);
+          }
+          //notifiedFIFO_elt_t *req = pullTpool(&gNB->respDecode, &gNB->threadPool);
+          if (req == NULL)
+              break; // Tpool has been stopped
+          nr_postDecode(gNB, req);
+          delNotifiedFIFO_elt(req);
+          totalDecode--;
+      }
+    
     }
   }
+  /*
     while (totalDecode > 0) {
       notifiedFIFO_elt_t *req = pullTpool(&gNB->respDecode, &gNB->threadPool);
       if (req == NULL)
@@ -919,7 +947,7 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
       nr_postDecode(gNB, req);
       delNotifiedFIFO_elt(req);
       totalDecode--;
-    }
+    }*/
   /* Do ULSCH decoding time measurement only when number of PUSCH is limited to 1
    * (valid for unitary physical simulators). ULSCH processing loop is then executed
    * only once, which ensures exactly one start and stop of the ULSCH decoding time

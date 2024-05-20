@@ -80,6 +80,7 @@ unsigned short config_frames[4] = {2,9,11,13};
 #include "nfapi/oai_integration/vendor_ext.h"
 #include "gnb_config.h"
 #include "openair2/E1AP/e1ap_common.h"
+#include "/home/nakaolab/rfnoc_test.ldpc/include/ldpc_rfnoc_wrapper.h"
 #ifdef ENABLE_AERIAL
 #include "nfapi/oai_integration/aerial/fapi_nvIPC.h"
 #endif
@@ -626,6 +627,11 @@ int main( int argc, char **argv ) {
   printf("Reading in command-line options\n");
   get_options(uniqCfg);
 
+  // create gnb rfnoc instance
+  void* wrapper_gnb = create_rfnoc_wrapper();
+  int instance_id_gnb;
+  instance_id_gnb = create_ldpc_instance(wrapper_gnb, false, 1);
+
   EPC_MODE_ENABLED = !IS_SOFTMODEM_NOS1;
 
   if (CONFIG_ISFLAGSET(CONFIG_ABORT) ) {
@@ -695,7 +701,8 @@ int main( int argc, char **argv ) {
 
   if (RC.nb_nr_L1_inst > 0) {
     printf("Initializing gNB threads single_thread_flag:%d wait_for_sync:%d\n", single_thread_flag,wait_for_sync);
-    init_gNB(single_thread_flag,wait_for_sync);
+    //init_gNB(single_thread_flag,wait_for_sync);
+    init_gNB(single_thread_flag,wait_for_sync, wrapper_gnb, instance_id_gnb);
   }
 
   printf("wait_gNBs()\n");
@@ -798,6 +805,9 @@ int main( int argc, char **argv ) {
   printf("Returned from ITTI signal handler\n");
   oai_exit=1;
   printf("oai_exit=%d\n",oai_exit);
+
+  release_ldpc_instance(wrapper_gnb, instance_id_gnb);
+  delete_rfnoc_wrapper(wrapper_gnb);
 
   // cleanup
   if (RC.nb_nr_L1_inst > 0)

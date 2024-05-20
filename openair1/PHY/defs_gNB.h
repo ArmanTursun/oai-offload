@@ -43,6 +43,7 @@
 #include "PHY/CODING/nrLDPC_decoder/nrLDPC_types.h"
 #include "executables/rt_profiling.h"
 #include "nfapi_nr_interface_scf.h"
+#include "/home/nakaolab/rfnoc_test.ldpc/include/ldpc_rfnoc_wrapper.h"
 
 #define MAX_NUM_RU_PER_gNB 8
 #define MAX_PUCCH0_NID 8
@@ -636,6 +637,9 @@ typedef struct PHY_VARS_gNB_s {
 
   int ldpc_offload_flag;
 
+  uint8_t sc_idx;   // Xilinx LDPC scaling index (0-15)
+  unsigned char qbits; // quantization index 
+
   int max_ldpc_iterations;
   /// indicate the channel estimation technique in time domain
   int chest_time;
@@ -709,6 +713,12 @@ typedef struct PHY_VARS_gNB_s {
   */
   notifiedFIFO_t respPuschSymb;
   notifiedFIFO_t respDecode;
+  //notifiedFIFO_t respDecode_pre_1;
+  notifiedFIFO_t respDecode_pre;
+  //notifiedFIFO_t respDecode_pre_2;
+  //notifiedFIFO_t respDecode_post_1;
+  //notifiedFIFO_t respDecode_post_2;
+  notifiedFIFO_t respDecode_post;
   notifiedFIFO_t resp_L1;
   notifiedFIFO_t L1_tx_free;
   notifiedFIFO_t L1_tx_filled;
@@ -716,6 +726,11 @@ typedef struct PHY_VARS_gNB_s {
   notifiedFIFO_t L1_rx_out;
   notifiedFIFO_t resp_RU_tx;
   tpool_t threadPool;
+  tpool_t threadPool_LDPC_de;
+  tpool_t threadPool_LDPC_en;
+  int nbDecode_offload;
+  int nbDecode_oai;
+  int nbDecode;
   int nbSymb;
   int num_pusch_symbols_per_thread;
   pthread_t L1_rx_thread;
@@ -726,6 +741,9 @@ typedef struct PHY_VARS_gNB_s {
   void *scopeData;
   /// structure for analyzing high-level RT measurements
   rt_L1_profiling_t rt_L1_profiling; 
+  void* wrapper_gnb;
+  int instance_id_gnb;
+  
 } PHY_VARS_gNB;
 
 typedef struct puschSymbolProc_s {
@@ -770,10 +788,20 @@ typedef struct LDPCDecode_s {
   int Kr_bytes;
   int nbSegments;
   int segment_r;
+  int current_seg;
   int r_offset;
   int offset;
   int decodeIterations;
   uint32_t tbslbrm;
+  int no_iteration_ldpc;
+  uint8_t* llrProcBuf;
+  int8_t* l;
+  uint32_t* samples_to_decode;
+  uint32_t* num_requested_samples_de;
+  uint64_t* status_de_ptr;
+  uint64_t* params_de_ptr;
+  uint32_t G;
+  uint8_t nlayers;
 } ldpcDecode_t;
 
 struct ldpcReqId {
@@ -783,6 +811,7 @@ struct ldpcReqId {
   uint8_t  codeblock;
   uint16_t spare;
 } __attribute__((packed));
+
 
 union ldpcReqUnion {
   struct ldpcReqId s;

@@ -34,6 +34,7 @@
 #include "time_meas.h"
 #endif
 #include "nrLDPCdecoder_defs.h"
+#include <stdbool.h>
 typedef struct {
   uint8_t* d;
   int dim1;
@@ -90,8 +91,22 @@ typedef struct nrLDPC_dec_params {
     uint8_t rv;
     uint8_t numMaxIter; /**< Maximum number of iterations */
     int E;
+    int block_length;
     e_nrLDPC_outMode outMode; /**< Output format */
     int crc_type;
+    //uint64_t* params_de_ptr;
+    uint8_t max_schedule;
+    uint8_t mb;
+    uint8_t id; 
+    //bool term_on_no_change;
+    //bool term_on_pass;
+    //bool include_parity_op;
+    //bool hard_op;
+    uint8_t sc_idx;
+    uint8_t bg_rfnoc;
+    uint8_t z_set;
+    uint8_t z_j;
+    uint32_t Kb;
     int (*check_crc)(uint8_t* decoded_bytes, uint32_t n, uint8_t crc_type);
     uint8_t setCombIn;
 } t_nrLDPC_dec_params;
