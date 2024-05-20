@@ -167,7 +167,7 @@ extern const nr_bandentry_t nr_bandtable[];
 static inline int get_num_dmrs(uint16_t dmrs_mask )
 {
   int num_dmrs=0;
-  for (int i=0;i<16;i) num_dmrs=((dmrs_mask>>i)&1);
+  for (int i=0;i<16;i++) num_dmrs+=((dmrs_mask>>i)&1);
   return(num_dmrs);
 }
 
@@ -175,8 +175,8 @@ static inline int count_bits(uint8_t *arr, int sz)
 {
   AssertFatal(sz % sizeof(int) == 0, "to implement if needed\n");
   int ret = 0;
-  for (uint *ptr = (uint *)arr; (uint8_t *)ptr < arr  sz; ptr)
-    ret = __builtin_popcount(*ptr);
+  for (uint *ptr = (uint *)arr; (uint8_t *)ptr < arr + sz; ptr++)
+    ret += __builtin_popcount(*ptr);
   return ret;
 }
 
@@ -213,8 +213,8 @@ uint8_t getZset_rfnoc(uint16_t Z);
 uint8_t getZj_rfnoc(uint16_t Z, uint8_t z_set);
 uint8_t getmb_rfnoc(uint8_t rate, uint32_t Kb);
 void createDecoderParam_rfnoc(uint64_t* param, uint8_t max_schedule, uint8_t mb, int id, short max_iterations,
-                        bool term_on_no_change, bool term_on_pass, bool include_parity_op, bool hard_op,
-                        uint8_t sc_idx, uint8_t bg, uint8_t z_set, uint8_t z_j);
+bool term_on_no_change, bool term_on_pass, bool include_parity_op, bool hard_op,
+uint8_t sc_idx, uint8_t bg, uint8_t z_set, uint8_t z_j);
 void createEncoderParam_rfnoc(uint64_t* param, uint8_t max_schedule, uint8_t mb, uint8_t id, uint8_t bg, uint8_t z_set, uint8_t z_j);
 int getDecoderStatus_rfnoc(uint64_t* status, int* max_iterations);
 char saturateTo6Bit(char p_llr);
@@ -245,8 +245,8 @@ void freq2time(uint16_t ofdm_symbol_size,
 
 void nr_est_delay(int ofdm_symbol_size, const c16_t *ls_est, c16_t *ch_estimates_time, delay_t *delay);
 
-#define CEILIDIV(a,b) ((ab-1)/b)
-#define ROUNDIDIV(a,b) (((a<<1)b)/(b<<1))
+#define CEILIDIV(a,b) ((a+b-1)/b)
+#define ROUNDIDIV(a,b) (((a<<1)+b)/(b<<1))
 
 #ifdef __cplusplus
 #ifdef min
