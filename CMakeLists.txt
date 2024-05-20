@@ -502,14 +502,14 @@ target_link_libraries(shlib_loader PRIVATE CONFIG_LIB)
 # add rfnoc
 ###################################
 set(HWLIB_RFNOC_SOURCE
-  /root/rfnoc_test.ldpc/lib/ldpc_control.cpp
-  /root/rfnoc_test.ldpc/lib/ldpc_rfnoc.cpp
-  /root/rfnoc_test.ldpc/lib/ldpc_rfnoc_wrapper.cpp
+  /home/nakaolab/rfnoc_test.ldpc/lib/ldpc_control.cpp
+  /home/nakaolab/rfnoc_test.ldpc/lib/ldpc_rfnoc.cpp
+  /home/nakaolab/rfnoc_test.ldpc/lib/ldpc_rfnoc_wrapper.cpp
   )
 #set_source_files_properties(${HWLIB_RFNOC_SOURCE} PROPERTIES LANGUAGE CXX)
 add_library(oai_rfnocdevif SHARED ${HWLIB_RFNOC_SOURCE} )
 target_include_directories(oai_rfnocdevif PRIVATE
-  "/root/rfnoc_test.ldpc/lib/"
+  "/home/nakaolab/rfnoc_test.ldpc/lib/"
   ${Boost_INCLUDE_DIR}
 )
 target_link_libraries(oai_rfnocdevif uhd)
