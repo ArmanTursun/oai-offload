@@ -49,6 +49,8 @@
 #include <syscall.h>
 #include "common/utils/nr/nr_common.h"
 #include "/home/nakaolab/rfnoc_test.ldpc/include/ldpc_rfnoc_wrapper.h"
+#include "openair2/E2AP/flexric/src/util/time_now_us.h"
+#include <inttypes.h>
 //#define DEBUG_ULSCH_DECODING
 //#define gNB_DEBUG_TRACE
 
@@ -766,6 +768,14 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
       harq_process->d_to_be_cleared[r] = true;
     harq_process->harq_to_be_cleared = false;
   }
+  
+  
+  //int offload_flag = -1;
+  //if (phy_vars_gNB->ldpc_offload >= 0)
+  //  offload_flag = phy_vars_gNB->ldpc_offload;
+  //if (offload_flag >= 0 )
+  //printf("[E2-AGENT Offload]: ldpc_offload = %d, TBS = %d, Timestamp = %" PRId64 "\n", phy_vars_gNB->ldpc_offload, A, time_now_us());
+  printf("[E2-AGENT Offload]: ldpc_offload = %d, TBS = %d, ULSCH_id = %d, rnti = %d \n", phy_vars_gNB->ldpc_offload, A, ULSCH_id, ulsch->rnti);
 
   if (phy_vars_gNB->ldpc_offload_flag)
     return decode_offload(phy_vars_gNB, ULSCH_id, ulsch_llr, pusch_pdu, &decParams, harq_pid, G);
@@ -785,8 +795,8 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
   	int jobs_pre = 0;
   	for (int r = 0; r < harq_process->C; r++) {
     		int E = nr_get_E(G, harq_process->C, Qm, n_layers, r);
-    		//union ldpcReqUnion id = {.s = {ulsch->rnti, frame, nr_tti_rx, 0, A}};
-    		union ldpcReqUnion id = {.s = {0, 0, 0, 0, A}};
+    		union ldpcReqUnion id = {.s = {ulsch->rnti, frame, nr_tti_rx, 0, A}};
+    		//union ldpcReqUnion id = {.s = {0, 0, 0, 0, A}};
             notifiedFIFO_elt_t *req = NULL;
             //if (r < harq_process->C / 2) {
             //    req = newNotifiedFIFO_elt(sizeof(ldpcDecode_t), id.s.spare,
@@ -860,8 +870,8 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
   	for (int r = 0; r < harq_process->C; r++) {
   			//printf("requested samples in round %d: %d\n", r, num_requested_samples_de);
     		int E = nr_get_E(G, harq_process->C, Qm, n_layers, r);
-    		//union ldpcReqUnion id = {.s = {ulsch->rnti, frame, nr_tti_rx, 1, A}};
-    		union ldpcReqUnion id = {.s = {0, 0, 0, 0, A+1}};
+    		union ldpcReqUnion id = {.s = {ulsch->rnti, frame, nr_tti_rx, 1, A}};
+    		//union ldpcReqUnion id = {.s = {0, 0, 0, 0, A+1}};
             //notifiedFIFO_elt_t *req = NULL;
             //if (r < harq_process->C / 2){
             //    req = newNotifiedFIFO_elt(sizeof(ldpcDecode_t), id.s.spare, &phy_vars_gNB->respDecode_post_1, &nr_processULRFNoC_postDecode);
@@ -907,8 +917,8 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
   	set_abort(&harq_process->abort_decode, false);
   	for (int r = 0; r < harq_process->C; r++) {
     		int E = nr_get_E(G, harq_process->C, Qm, n_layers, r);
-    		//union ldpcReqUnion id = {.s = {ulsch->rnti, frame, nr_tti_rx, 0, A}};
-    		union ldpcReqUnion id = {.s = {0, 0, 0, 0, A}};
+    		union ldpcReqUnion id = {.s = {ulsch->rnti, frame, nr_tti_rx, 0, A}};
+    		//union ldpcReqUnion id = {.s = {0, 0, 0, 0, A}};
     		notifiedFIFO_elt_t *req = newNotifiedFIFO_elt(sizeof(ldpcDecode_t), id.s.spare, &phy_vars_gNB->respDecode, &nr_processULSegment);
     		ldpcDecode_t *rdata = (ldpcDecode_t *)NotifiedFifoData(req);
     		decParams.R = nr_get_R_ldpc_decoder(pusch_pdu->pusch_data.rv_index,

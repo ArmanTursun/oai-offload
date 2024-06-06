@@ -21,6 +21,10 @@
 
 #include "ran_func_mac.h"
 #include <assert.h>
+#include <stdio.h>
+#include <inttypes.h>
+#include "common/ran_context.h"
+#include "PHY/defs_gNB.h"
 
 static
 const int mod_id = 0;
@@ -60,11 +64,11 @@ bool read_mac_sm(void* data)
     rd->ul_aggr_tbs = UE->mac_stats.ul.total_bytes;
 
     if (is_xlsch_in_slot(RC.nrmac[mod_id]->dlsch_slot_bitmap[rd->slot / 64], rd->slot)) {
-      rd->dl_curr_tbs = UE->mac_stats.dl.current_bytes;
+      rd->dl_curr_tbs = UE->mac_stats.dl.current_bytes << 3;
       rd->dl_sched_rb = UE->mac_stats.dl.current_rbs;
     }
     if (is_xlsch_in_slot(RC.nrmac[mod_id]->ulsch_slot_bitmap[rd->slot / 64], rd->slot)) {
-      rd->ul_curr_tbs = UE->mac_stats.ul.current_bytes;
+      rd->ul_curr_tbs = UE->mac_stats.ul.current_bytes << 3;
       rd->ul_sched_rb = sched_ctrl->sched_pusch.rbSize;
     }
 
@@ -108,6 +112,8 @@ bool read_mac_sm(void* data)
     rd->ul_harq[numUlHarq] = UE->mac_stats.ul.errors;
 
     ++i;
+    //if (rd->ul_curr_tbs > 0)
+    printf("[E2 Agent Report]: TBS = %" PRIu64 ", Timestamp = %" PRId64 "\n", rd->ul_curr_tbs, mac->msg.tstamp);
   }
 
   return num_ues > 0;
@@ -122,6 +128,21 @@ void read_mac_setup_sm(void* data)
 sm_ag_if_ans_t write_ctrl_mac_sm(void const* data)
 {
   assert(data != NULL);
-  assert(0 !=0 && "Not supported");
+  //assert(0 !=0 && "Not supported");
+  mac_ctrl_req_data_t const* mac_req_ctrl = (mac_ctrl_req_data_t const* )data;
+  mac_ctrl_msg_t const* msg = &mac_req_ctrl->msg;
+  PHY_VARS_gNB *gNB;
+  gNB = RC.gNB[0];
+  if (msg->offload == 1){
+  	gNB->ldpc_offload = 1;
+  }else{
+  	gNB->ldpc_offload = 0;
+  }
+  	
+  //if (msg->offload >= 0)
+  printf("[E2 Agent Control]: ldpc_offload = %d, Timestamp = %" PRId64 "\n", msg->offload, msg->tms);
+  sm_ag_if_ans_t ans = {.type = CTRL_OUTCOME_SM_AG_IF_ANS_V0};
+  ans.ctrl_out.type = MAC_AGENT_IF_CTRL_ANS_V0;
+  return ans;
 }
 
