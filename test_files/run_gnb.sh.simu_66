@@ -1,0 +1,19 @@
+#!/bin/sh -x
+
+sysctl -w net.core.rmem_max=62500000
+sysctl -w net.core.wmem_max=62500000
+
+
+#./run_threadpool_measurement.sh
+cd openairinterface5g/cmake_targets/ran_build/build/
+#cd /root/openairinterface5g.develop.rfnoc.latest/cmake_targets/ran_build/build/
+#cd oai-offload/cmake_targets/ran_build/build/
+
+
+#sudo OAI_THREADPOOLMEASUREMENTS=tpool.meas ./nr-softmodem -E --sa --rfsim -O /root/gnb.sa.band77.fr1.273PRB.usrpx300.conf --gNBs.[0].min_rxtxtime 6 --parallel-config PARALLEL_SINGLE_THREAD #--rfsimulator.options chanmod --rfsimulator.modelname AWGN #-s -30
+
+#sudo OAI_THREADPOOLMEASUREMENTS=tpool.meas 
+#sudo ./nr-softmodem -E --sa --rfsim -O /home/nakaolab/gnb.sa.band78.106prb.rfsim.conf --thread-pool 1,3,5,7,9,11 --reorder-thread-disable 1 --log_config.global_log_level error --log_config.global_log_options level,time # --parallel-config PARALLEL_SINGLE_THREAD #--rfsimulator.options chanmod --rfsimulator.modelname AWGN #-s -30
+
+sudo ./nr-softmodem --sa --rfsim -O /home/nakaolab/gnb.sa.band66.u0.25prb.rfsim.conf --thread-pool 1,3,5,7,9,11 --reorder-thread-disable 1 --log_config.global_log_level warning --log_config.global_log_options level,time
+
