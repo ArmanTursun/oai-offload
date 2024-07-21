@@ -20,6 +20,7 @@
  */
 
 
+
 #define _GNU_SOURCE             /* See feature_test_macros(7) */
 #include <sched.h>
 
@@ -88,6 +89,14 @@ unsigned short config_frames[4] = {2,9,11,13};
 #include "openair2/E2AP/flexric/src/agent/e2_agent_api.h"
 #include "openair2/E2AP/RAN_FUNCTION/init_ran_func.h"
 #endif
+
+#include <fcntl.h>
+#include <unistd.h>
+#include <assert.h>
+
+#define MSR_RAPL_POWER_UNIT 0x606
+#define MSR_PKG_ENERGY_STATUS 0x611
+#define MSR_PP0_ENERGY_STATUS 0x639
 
 pthread_cond_t nfapi_sync_cond;
 pthread_mutex_t nfapi_sync_mutex;
@@ -605,8 +614,36 @@ static void initialize_agent(ngran_node_t node_type, e2_agent_args_t oai_args)
 }
 #endif
 
+
+
+static inline uint64_t read_msr(int fd, unsigned int reg){
+	uint64_t data;
+	if (pread(fd, &data, sizeof data, reg) != sizeof data){
+		perror("pread");
+		exit(1);
+	}
+	return data;
+}
+
+
+
 configmodule_interface_t *uniqCfg = NULL;
 int main( int argc, char **argv ) {
+
+  int fd = open("/dev/cpu/0/msr", O_RDONLY);
+  if (fd == -1){
+     perror("open");
+     exit(1);
+  }
+  // read power uint information
+  uint64_t power_unit = read_msr(fd, MSR_RAPL_POWER_UNIT);
+  double energy_unit = 1.0 / (1 << (power_unit & 0x0f));
+  
+  // read the initial energy consumption
+  uint64_t start_energy_pkg = read_msr(fd, MSR_PKG_ENERGY_STATUS);
+  uint64_t start_energy_pp0 = read_msr(fd, MSR_PP0_ENERGY_STATUS);
+
+
   int ru_id, CC_id = 0;
   start_background_system();
 
@@ -614,6 +651,7 @@ int main( int argc, char **argv ) {
   if ((uniqCfg = load_configmodule(argc, argv, CONFIG_ENABLECMDLINEONLY)) == NULL) {
     exit_fun("[SOFTMODEM] Error, configuration module init failed\n");
   }
+  
 
   set_softmodem_sighandler();
 #ifdef DEBUG_CONSOLE
@@ -628,8 +666,9 @@ int main( int argc, char **argv ) {
   get_options(uniqCfg);
 
   // create gnb rfnoc instance
-  void* wrapper_gnb = create_rfnoc_wrapper();
-  int instance_id_gnb;
+  void* wrapper_gnb;
+  int instance_id_gnb = 0;
+  wrapper_gnb = create_rfnoc_wrapper();
   instance_id_gnb = create_ldpc_instance(wrapper_gnb, false, 1);
 
   EPC_MODE_ENABLED = !IS_SOFTMODEM_NOS1;
@@ -802,9 +841,26 @@ int main( int argc, char **argv ) {
   printf("Entering ITTI signals handler\n");
   printf("TYPE <CTRL-C> TO TERMINATE\n");
   itti_wait_tasks_end(NULL);
+  
   printf("Returned from ITTI signal handler\n");
   oai_exit=1;
   printf("oai_exit=%d\n",oai_exit);
+  
+  // read the final energy consumption
+  uint64_t end_energy_pkg = read_msr(fd, MSR_PKG_ENERGY_STATUS);
+  uint64_t end_energy_pp0 = read_msr(fd, MSR_PP0_ENERGY_STATUS);
+      
+  // close the MSR device file
+  close(fd);
+      
+  // calculate the energy consumed
+  double energy_consumed_pkg = (end_energy_pkg - start_energy_pkg) * energy_unit;
+  double energy_consumed_pp0 = (end_energy_pp0 - start_energy_pp0) * energy_unit;
+      
+  //printf("Energy power unit %f\n", energy_unit);
+  printf("Energy consumed by the package: %.10f Joules, %" PRId64 " \n", energy_consumed_pkg, end_energy_pkg - start_energy_pkg);
+  printf("Energy consumed by the core (PP0): %.10f Joules, %" PRId64 " \n", energy_consumed_pp0, end_energy_pp0 - start_energy_pp0);
+  //printf("Energy consumed by the core (PP0): %.10f Joules, %" PRId64 " \n", energy_consumed_pp0, end_energy_pp0 - start_energy_pp0);;
 
   release_ldpc_instance(wrapper_gnb, instance_id_gnb);
   delete_rfnoc_wrapper(wrapper_gnb);

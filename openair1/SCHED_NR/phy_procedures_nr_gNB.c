@@ -292,6 +292,7 @@ static void nr_postDecode(PHY_VARS_gNB *gNB, notifiedFIFO_elt_t *req)
   if (ulsch_harq->processedSegments == ulsch_harq->C) {
     // When the number of code blocks is 1 (C = 1) and ulsch_harq->processedSegments = 1, we can assume a good TB because of the
     // CRC check made by the LDPC for early termination, so, no need to perform CRC check twice for a single code block
+    printf("TBS: %u \n", ulsch_harq->TBS << 3);
     bool crc_valid = true;
     if (ulsch_harq->C > 1) {
       crc_valid = check_crc(ulsch_harq->b, lenWithCrc(1, rdata->A), crcType(1, rdata->A));

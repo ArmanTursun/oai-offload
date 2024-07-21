@@ -775,7 +775,7 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
   //  offload_flag = phy_vars_gNB->ldpc_offload;
   //if (offload_flag >= 0 )
   //printf("[E2-AGENT Offload]: ldpc_offload = %d, TBS = %d, Timestamp = %" PRId64 "\n", phy_vars_gNB->ldpc_offload, A, time_now_us());
-  printf("[E2-AGENT Offload]: ldpc_offload = %d, TBS = %d, ULSCH_id = %d, rnti = %d \n", phy_vars_gNB->ldpc_offload, A, ULSCH_id, ulsch->rnti);
+  //printf("[E2-AGENT Offload]: ldpc_offload = %d, TBS = %d, ULSCH_id = %d, rnti = %d \n", phy_vars_gNB->ldpc_offload, A, ULSCH_id, ulsch->rnti);
 
   if (phy_vars_gNB->ldpc_offload_flag)
     return decode_offload(phy_vars_gNB, ULSCH_id, ulsch_llr, pusch_pdu, &decParams, harq_pid, G);
@@ -914,7 +914,7 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
     		offset += ((harq_process->K >> 3) - (harq_process->F >> 3) - ((harq_process->C > 1) ? 3 : 0));
   	}
   } else {
-  	set_abort(&harq_process->abort_decode, false);
+  	//set_abort(&harq_process->abort_decode, false);
   	for (int r = 0; r < harq_process->C; r++) {
     		int E = nr_get_E(G, harq_process->C, Qm, n_layers, r);
     		union ldpcReqUnion id = {.s = {ulsch->rnti, frame, nr_tti_rx, 0, A}};
@@ -944,7 +944,7 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
     		rdata->offset = offset;
     		rdata->ulsch = ulsch;
     		rdata->ulsch_id = ULSCH_id;
-            phy_vars_gNB->nbDecode_oai++;
+            	phy_vars_gNB->nbDecode_oai++;
     		rdata->tbslbrm = pusch_pdu->maintenance_parms_v3.tbSizeLbrmBytes;
     		pushTpool(&phy_vars_gNB->threadPool, req);
     		LOG_D(PHY, "Added a block to decode, in pipe: %d\n", r);

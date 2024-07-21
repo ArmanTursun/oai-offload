@@ -56,64 +56,41 @@ bool read_mac_sm(void* data)
   UE_iterator(UE_info->list, UE) {
     const NR_UE_sched_ctrl_t* sched_ctrl = &UE->UE_sched_ctrl;
     mac_ue_stats_impl_t* rd = &mac->msg.ue_stats[i];
-
-    rd->frame = RC.nrmac[mod_id]->frame;
-    rd->slot = RC.nrmac[mod_id]->slot;
-
-    rd->dl_aggr_tbs = UE->mac_stats.dl.total_bytes;
-    rd->ul_aggr_tbs = UE->mac_stats.ul.total_bytes;
-
-    if (is_xlsch_in_slot(RC.nrmac[mod_id]->dlsch_slot_bitmap[rd->slot / 64], rd->slot)) {
-      rd->dl_curr_tbs = UE->mac_stats.dl.current_bytes << 3;
-      rd->dl_sched_rb = UE->mac_stats.dl.current_rbs;
-    }
-    if (is_xlsch_in_slot(RC.nrmac[mod_id]->ulsch_slot_bitmap[rd->slot / 64], rd->slot)) {
-      rd->ul_curr_tbs = UE->mac_stats.ul.current_bytes << 3;
-      rd->ul_sched_rb = sched_ctrl->sched_pusch.rbSize;
-    }
-
+    
     rd->rnti = UE->rnti;
-    rd->dl_aggr_prb = UE->mac_stats.dl.total_rbs;
-    rd->ul_aggr_prb = UE->mac_stats.ul.total_rbs;
-    rd->dl_aggr_retx_prb = UE->mac_stats.dl.total_rbs_retx;
-    rd->ul_aggr_retx_prb = UE->mac_stats.ul.total_rbs_retx;
-
-    rd->dl_aggr_bytes_sdus = UE->mac_stats.dl.lc_bytes[3];
-    rd->ul_aggr_bytes_sdus = UE->mac_stats.ul.lc_bytes[3];
-
-    rd->dl_aggr_sdus = UE->mac_stats.dl.num_mac_sdu;
-    rd->ul_aggr_sdus = UE->mac_stats.ul.num_mac_sdu;
-
-    rd->pusch_snr = (float) sched_ctrl->pusch_snrx10 / 10; //: float = -64;
-    rd->pucch_snr = (float) sched_ctrl->pucch_snrx10 / 10; //: float = -64;
-
-    rd->wb_cqi = sched_ctrl->CSI_report.cri_ri_li_pmi_cqi_report.wb_cqi_1tb;
-    rd->dl_mcs1 = sched_ctrl->dl_bler_stats.mcs;
-    rd->dl_bler = sched_ctrl->dl_bler_stats.bler;
-    rd->ul_mcs1 = sched_ctrl->ul_bler_stats.mcs;
-    rd->ul_bler = sched_ctrl->ul_bler_stats.bler;
-    rd->dl_mcs2 = 0;
-    rd->ul_mcs2 = 0;
-    rd->phr = sched_ctrl->ph;
-
+    
+    rd->context.pusch_snr = (float) sched_ctrl->pusch_snrx10 / 10; //: float = -64;
+    rd->context.pucch_snr = (float) sched_ctrl->pusch_snrx10 / 10; //: float = -64;
+    rd->context.dl_bler = sched_ctrl->dl_bler_stats.bler;
+    rd->context.ul_bler = sched_ctrl->ul_bler_stats.bler;
     const uint32_t bufferSize = sched_ctrl->estimated_ul_buffer - sched_ctrl->sched_ul_bytes;
-    rd->bsr = bufferSize;
-
-    const size_t numDLHarq = 4;
-    rd->dl_num_harq = numDLHarq;
-    for (uint8_t j = 0; j < numDLHarq; ++j)
-      rd->dl_harq[j] = UE->mac_stats.dl.rounds[j];
-    rd->dl_harq[numDLHarq] = UE->mac_stats.dl.errors;
-
-    const size_t numUlHarq = 4;
-    rd->ul_num_harq = numUlHarq;
-    for (uint8_t j = 0; j < numUlHarq; ++j)
-      rd->ul_harq[j] = UE->mac_stats.ul.rounds[j];
-    rd->ul_harq[numUlHarq] = UE->mac_stats.ul.errors;
+    rd->context.bsr = bufferSize;
+    rd->context.wb_cqi = sched_ctrl->CSI_report.cri_ri_li_pmi_cqi_report.wb_cqi_1tb;
+    rd->context.dl_mcs1 = sched_ctrl->dl_bler_stats.mcs;
+    rd->context.ul_mcs1 = sched_ctrl->ul_bler_stats.mcs;
+    rd->context.dl_mcs2 = 0;
+    rd->context.ul_mcs2 = 0;
+    rd->context.phr = sched_ctrl->ph;
+    
+    // TODO add tbs to each UE
+    //rd->num_tbs = num_tbs;
+    
+    //rd->tbs = calloc(NUM_UES, sizeof(mac_tbs_stats_t));
+    //assert(rd->tbs != NULL && "memory exhausted");
+    
+    //for (int j = 0; j < rd->num_tbs; j++)
+    //{
+    //  rd->tbs[j].tbs = abs(rand()%mod);
+    //  rd->tbs[j].frame = abs(rand()%mod);
+    //  rd->tbs[j].slot = abs(rand()%mod);
+    //  rd->tbs[j].latency = abs(rand()%mod);
+    //  rd->tbs[j].crc = abs(rand()%mod);
+    //}
+    
 
     ++i;
     //if (rd->ul_curr_tbs > 0)
-    printf("[E2 Agent Report]: TBS = %" PRIu64 ", Timestamp = %" PRId64 "\n", rd->ul_curr_tbs, mac->msg.tstamp);
+    //printf("[E2 Agent Report]: TBS = %" PRIu64 ", Timestamp = %" PRId64 "\n", rd->ul_curr_tbs, mac->msg.tstamp);
   }
 
   return num_ues > 0;
@@ -129,18 +106,18 @@ sm_ag_if_ans_t write_ctrl_mac_sm(void const* data)
 {
   assert(data != NULL);
   //assert(0 !=0 && "Not supported");
-  mac_ctrl_req_data_t const* mac_req_ctrl = (mac_ctrl_req_data_t const* )data;
-  mac_ctrl_msg_t const* msg = &mac_req_ctrl->msg;
-  PHY_VARS_gNB *gNB;
-  gNB = RC.gNB[0];
-  if (msg->offload == 1){
-  	gNB->ldpc_offload = 1;
-  }else{
-  	gNB->ldpc_offload = 0;
-  }
+  //mac_ctrl_req_data_t const* mac_req_ctrl = (mac_ctrl_req_data_t const* )data;
+  //mac_ctrl_msg_t const* msg = &mac_req_ctrl->msg;
+  //PHY_VARS_gNB *gNB;
+  //gNB = RC.gNB[0];
+  
+  // TODO copy offload indication to each UE
+  //for (uint32_t i = 0; i < msg->num_ues; i++){
+  //	mac_ue_ctrl_t* ue = msg->ues[i];
+  //	ue->offload = 1;
+  //}
   	
-  //if (msg->offload >= 0)
-  printf("[E2 Agent Control]: ldpc_offload = %d, Timestamp = %" PRId64 "\n", msg->offload, msg->tms);
+  //printf("[E2 Agent Control]: ldpc_offload = %d, Timestamp = %" PRId64 "\n", msg->offload, msg->tms);
   sm_ag_if_ans_t ans = {.type = CTRL_OUTCOME_SM_AG_IF_ANS_V0};
   ans.ctrl_out.type = MAC_AGENT_IF_CTRL_ANS_V0;
   return ans;
