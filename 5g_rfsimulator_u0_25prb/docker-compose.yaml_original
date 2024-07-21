@@ -3,8 +3,8 @@ services:
         container_name: "rfsim5g-mysql"
         image: mysql:8.0
         volumes:
-            - ./oai_db.sql:/docker-entrypoint-initdb.d/oai_db.sql
-            - ./mysql-healthcheck.sh:/tmp/mysql-healthcheck.sh
+            - ../5g_rfsimulator/oai_db.sql:/docker-entrypoint-initdb.d/oai_db.sql
+            - ../5g_rfsimulator/mysql-healthcheck.sh:/tmp/mysql-healthcheck.sh
         environment:
             - TZ=Europe/Paris
             - MYSQL_DATABASE=oai_db
@@ -25,7 +25,7 @@ services:
         environment:
             - TZ=Europe/paris
         volumes:
-            - ./mini_nonrf_config.yaml:/openair-amf/etc/config.yaml
+            - ../5g_rfsimulator/mini_nonrf_config.yaml:/openair-amf/etc/config.yaml
         depends_on:
             - mysql
         networks:
@@ -37,7 +37,7 @@ services:
         environment:
             - TZ=Europe/Paris
         volumes:
-            - ./mini_nonrf_config.yaml:/openair-smf/etc/config.yaml
+            - ../5g_rfsimulator/mini_nonrf_config.yaml:/openair-smf/etc/config.yaml
         depends_on:
             - oai-amf
         networks:
@@ -49,7 +49,7 @@ services:
         environment:
             - TZ=Europe/Paris
         volumes:
-            - ./mini_nonrf_config.yaml:/openair-upf/etc/config.yaml
+            - ../5g_rfsimulator/mini_nonrf_config.yaml:/openair-upf/etc/config.yaml
         depends_on:
             - oai-smf
         cap_add:
@@ -85,7 +85,7 @@ services:
         privileged: true
         container_name: rfsim5g-oai-gnb
         environment:
-            USE_ADDITIONAL_OPTIONS: --sa -E --rfsim --log_config.global_log_options level,nocolor,time
+            USE_ADDITIONAL_OPTIONS: --sa --rfsim --log_config.global_log_options level,nocolor,time
             ASAN_OPTIONS: detect_leaks=0
         depends_on:
             - oai-ext-dn
@@ -99,6 +99,7 @@ services:
             interval: 10s
             timeout: 5s
             retries: 5
+
     oai-nr-ue:
         image: oaisoftwarealliance/oai-nr-ue:develop
         privileged: true
@@ -121,7 +122,7 @@ services:
         privileged: true
         container_name: rfsim5g-oai-nr-ue2
         environment:
-            USE_ADDITIONAL_OPTIONS: --sa --rfsim -r 25 --numerology 0 --uicc0.imsi 208990100001101 --band 66 -C 2152260000 --CO -400000000 --ssb 76 --rfsimulator.serveraddr 192.168.11.47 --log_config.global_log_options level,nocolor,time
+            USE_ADDITIONAL_OPTIONS: -E --sa --rfsim -r 25 --numerology 0 --uicc0.imsi 208990100001101 --band 66 -C 2152260000 --CO -400000000 --ssb 76 --rfsimulator.serveraddr 192.168.11.47 --log_config.global_log_options level,nocolor,time
         networks:
             public_net:
                 ipv4_address: 192.168.71.151
@@ -138,7 +139,7 @@ services:
         privileged: true
         container_name: rfsim5g-oai-nr-ue3
         environment:
-            USE_ADDITIONAL_OPTIONS: --sa --rfsim -r 25 --numerology 0 --uicc0.imsi 208990100001102 --band 66 -C 2152260000 --CO -400000000 --ssb 76 --rfsimulator.serveraddr 192.168.11.47 --log_config.global_log_options level,nocolor,time
+            USE_ADDITIONAL_OPTIONS: -E --sa --rfsim -r 25 --numerology 0 --uicc0.imsi 208990100001101 --band 66 -C 2152260000 --CO -400000000 --ssb 76 --rfsimulator.serveraddr 192.168.11.47 --log_config.global_log_options level,nocolor,time
         networks:
             public_net:
                 ipv4_address: 192.168.71.152
@@ -151,6 +152,8 @@ services:
             retries: 5
 
 networks:
+    external:
+    	external: true
     public_net:
         driver: bridge
         name: rfsim5g-oai-public-net
@@ -167,4 +170,3 @@ networks:
                 - subnet: 192.168.72.128/26
         driver_opts:
             com.docker.network.bridge.name: "rfsim5g-traffic"
-            
