@@ -690,7 +690,7 @@ static void _nr_rx_sdu(const module_id_t gnb_mod_idP,
       
       //fprintf(file, "TBS,mcs,snr,crc,bler,latency\n");
       if (sdu_lenP << 3 > 928){
-      	FILE *file = fopen("/home/nakaolab/test_data/fpga/latency/fpga_50M.csv", "a");
+      	FILE *file = fopen("/home/nakaolab/openairinterface5g/test_data/fpga/latency/fpga_50M.csv", "a");
       	if (file == NULL) {
         	fprintf(stderr, "Error opening file.\n");
         	return;
