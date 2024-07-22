@@ -592,7 +592,9 @@ static void _nr_rx_sdu(const module_id_t gnb_mod_idP,
                        const uint16_t sdu_lenP,
                        const uint16_t timing_advance,
                        const uint8_t ul_cqi,
-                       const uint16_t rssi)
+                       const uint16_t rssi,
+		       const uint8_t crcP,
+		       const double pusch_latency)
 {
   gNB_MAC_INST *gNB_mac = RC.nrmac[gnb_mod_idP];
 
@@ -656,6 +658,26 @@ static void _nr_rx_sdu(const module_id_t gnb_mod_idP,
 
 #endif
 
+    //printf("[E2 Agent MAC_SDU]: TBS = %u, frame = %u, slot = %u, rnti = %d \n", sdu_lenP << 3, frameP, slotP, rntiP);
+    NR_mac_stats_t *ulsch_mac_stats = &UE->mac_stats;
+    NR_mac_ulsch_stats_t *ulsch_stats = &ulsch_mac_stats->ulsch_stats;
+    int rc_tbs = pthread_mutex_lock(&ulsch_stats->mutex);
+    DevAssert(rc_tbs == 0);
+    ulsch_tbs_stats_t *ulsch_tbs = &ulsch_stats->tbs_list[ulsch_stats->number_of_tbs];
+    ulsch_tbs->tbs = sdu_lenP << 3;
+    ulsch_tbs->frame = frameP;
+    ulsch_tbs->slot = slotP;
+    ulsch_tbs->crc_check = crcP;
+    ulsch_tbs->latency = pusch_latency;
+    ulsch_stats->number_of_tbs++;
+    if (ulsch_stats->number_of_tbs == 10){
+      ulsch_stats->number_of_tbs = 0;   // dummy method to prevent from fulling
+      //for (int aa = 0; aa < 50; aa++)
+	//ulsch_stats->tbs_list[aa] = NULL;
+    }
+    rc_tbs = pthread_mutex_unlock(&ulsch_stats->mutex);
+    DevAssert(rc_tbs == 0);
+
     if (sduP != NULL){
       LOG_D(NR_MAC, "Received PDU at MAC gNB \n");
 
@@ -665,6 +687,20 @@ static void _nr_rx_sdu(const module_id_t gnb_mod_idP,
       if (UE_scheduling_control->sched_ul_bytes < 0)
         UE_scheduling_control->sched_ul_bytes = 0;
 
+      
+      //fprintf(file, "TBS,mcs,snr,crc,bler,latency\n");
+      if (sdu_lenP << 3 > 928){
+      	FILE *file = fopen("/home/nakaolab/test_data/fpga/latency/fpga_50M.csv", "a");
+      	if (file == NULL) {
+        	fprintf(stderr, "Error opening file.\n");
+        	return;
+      	}
+      	fprintf(file, "%u,%u,%d,%u,%f,%f\n", sdu_lenP << 3, UE_scheduling_control->ul_bler_stats.mcs, UE_scheduling_control->pusch_snrx10 / 10, ulsch_tbs->crc_check, UE_scheduling_control->ul_bler_stats.bler, pusch_latency);
+      	fclose(file);
+      }
+      //printf("[E2 Agent MAC_SDU]: TBS = %u, frame = %u, slot = %u, rnti = %d, latency = %9.5f, crc = %u, mcs = %u, snr = %d, bler = %f \n", sdu_lenP << 3, frameP, slotP, rntiP, pusch_latency, ulsch_tbs->crc_check, UE_scheduling_control->ul_bler_stats.mcs, UE_scheduling_control->pusch_snrx10 / 10, UE_scheduling_control->ul_bler_stats.bler);
+      //printf("[E2 Agent MAC_SDU]: TBS = %u, latency = %f, crc = %u, mcs = %u, snr = %d, bler = %f \n", sdu_lenP << 3, pusch_latency, ulsch_tbs->crc_check, UE_scheduling_control->ul_bler_stats.mcs, UE_scheduling_control->pusch_snrx10 / 10, UE_scheduling_control->ul_bler_stats.bler);
+      
       nr_process_mac_pdu(gnb_mod_idP, UE, CC_idP, frameP, slotP, sduP, sdu_lenP, harq_pid);
     }
     else {
@@ -886,11 +922,13 @@ void nr_rx_sdu(const module_id_t gnb_mod_idP,
                const uint16_t sdu_lenP,
                const uint16_t timing_advance,
                const uint8_t ul_cqi,
-               const uint16_t rssi)
+               const uint16_t rssi,
+	       const uint8_t crcP,
+	       const double pusch_latency)
 {
   gNB_MAC_INST *gNB_mac = RC.nrmac[gnb_mod_idP];
   NR_SCHED_LOCK(&gNB_mac->sched_lock);
-  _nr_rx_sdu(gnb_mod_idP, CC_idP, frameP, slotP, rntiP, sduP, sdu_lenP, timing_advance, ul_cqi, rssi);
+  _nr_rx_sdu(gnb_mod_idP, CC_idP, frameP, slotP, rntiP, sduP, sdu_lenP, timing_advance, ul_cqi, rssi, crcP, pusch_latency);
   NR_SCHED_UNLOCK(&gNB_mac->sched_lock);
 }
 

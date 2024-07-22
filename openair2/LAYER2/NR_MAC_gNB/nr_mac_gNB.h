@@ -640,6 +640,22 @@ typedef struct NR_mac_dir_stats {
   uint32_t current_rbs;
 } NR_mac_dir_stats_t;
 
+
+typedef struct ulsch_tbs_stats{
+  uint32_t tbs;
+  uint32_t frame;
+  uint32_t slot;
+  double latency;
+  uint8_t crc_check; 
+} ulsch_tbs_stats_t;
+
+typedef struct NR_mac_ulsch_stats {
+  pthread_mutex_t mutex;
+  uint8_t number_of_tbs;
+  ulsch_tbs_stats_t tbs_list[10];
+} NR_mac_ulsch_stats_t;
+
+
 typedef struct NR_mac_stats {
   NR_mac_dir_stats_t dl;
   NR_mac_dir_stats_t ul;
@@ -649,6 +665,7 @@ typedef struct NR_mac_stats {
   int cumul_rsrp;
   uint8_t num_rsrp_meas;
   char srs_stats[50]; // Statistics may differ depending on SRS usage
+  NR_mac_ulsch_stats_t ulsch_stats;
 } NR_mac_stats_t;
 
 typedef struct NR_bler_options {

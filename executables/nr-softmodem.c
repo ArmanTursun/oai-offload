@@ -615,7 +615,7 @@ static void initialize_agent(ngran_node_t node_type, e2_agent_args_t oai_args)
 #endif
 
 
-
+/*
 static inline uint64_t read_msr(int fd, unsigned int reg){
 	uint64_t data;
 	if (pread(fd, &data, sizeof data, reg) != sizeof data){
@@ -624,24 +624,24 @@ static inline uint64_t read_msr(int fd, unsigned int reg){
 	}
 	return data;
 }
-
+*/
 
 
 configmodule_interface_t *uniqCfg = NULL;
 int main( int argc, char **argv ) {
 
-  int fd = open("/dev/cpu/0/msr", O_RDONLY);
-  if (fd == -1){
-     perror("open");
-     exit(1);
-  }
+  //int fd = open("/dev/cpu/0/msr", O_RDONLY);
+  //if (fd == -1){
+  //   perror("open");
+  //   exit(1);
+  //}
   // read power uint information
-  uint64_t power_unit = read_msr(fd, MSR_RAPL_POWER_UNIT);
-  double energy_unit = 1.0 / (1 << (power_unit & 0x0f));
+  //uint64_t power_unit = read_msr(fd, MSR_RAPL_POWER_UNIT);
+  //double energy_unit = 1.0 / (1 << (power_unit & 0x0f));
   
   // read the initial energy consumption
-  uint64_t start_energy_pkg = read_msr(fd, MSR_PKG_ENERGY_STATUS);
-  uint64_t start_energy_pp0 = read_msr(fd, MSR_PP0_ENERGY_STATUS);
+  //uint64_t start_energy_pkg = read_msr(fd, MSR_PKG_ENERGY_STATUS);
+  //uint64_t start_energy_pp0 = read_msr(fd, MSR_PP0_ENERGY_STATUS);
 
 
   int ru_id, CC_id = 0;
@@ -847,19 +847,19 @@ int main( int argc, char **argv ) {
   printf("oai_exit=%d\n",oai_exit);
   
   // read the final energy consumption
-  uint64_t end_energy_pkg = read_msr(fd, MSR_PKG_ENERGY_STATUS);
-  uint64_t end_energy_pp0 = read_msr(fd, MSR_PP0_ENERGY_STATUS);
+  //uint64_t end_energy_pkg = read_msr(fd, MSR_PKG_ENERGY_STATUS);
+  //uint64_t end_energy_pp0 = read_msr(fd, MSR_PP0_ENERGY_STATUS);
       
   // close the MSR device file
-  close(fd);
+  //close(fd);
       
   // calculate the energy consumed
-  double energy_consumed_pkg = (end_energy_pkg - start_energy_pkg) * energy_unit;
-  double energy_consumed_pp0 = (end_energy_pp0 - start_energy_pp0) * energy_unit;
+  //double energy_consumed_pkg = (end_energy_pkg - start_energy_pkg) * energy_unit;
+  //double energy_consumed_pp0 = (end_energy_pp0 - start_energy_pp0) * energy_unit;
       
   //printf("Energy power unit %f\n", energy_unit);
-  printf("Energy consumed by the package: %.10f Joules, %" PRId64 " \n", energy_consumed_pkg, end_energy_pkg - start_energy_pkg);
-  printf("Energy consumed by the core (PP0): %.10f Joules, %" PRId64 " \n", energy_consumed_pp0, end_energy_pp0 - start_energy_pp0);
+  //printf("Energy consumed by the package: %.10f Joules, %" PRId64 " \n", energy_consumed_pkg, end_energy_pkg - start_energy_pkg);
+  //printf("Energy consumed by the core (PP0): %.10f Joules, %" PRId64 " \n", energy_consumed_pp0, end_energy_pp0 - start_energy_pp0);
   //printf("Energy consumed by the core (PP0): %.10f Joules, %" PRId64 " \n", energy_consumed_pp0, end_energy_pp0 - start_energy_pp0);;
 
   release_ldpc_instance(wrapper_gnb, instance_id_gnb);

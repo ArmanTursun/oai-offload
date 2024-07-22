@@ -344,7 +344,9 @@ void nr_rx_sdu(const module_id_t gnb_mod_idP,
                const uint16_t sdu_lenP,
                const uint16_t timing_advance,
                const uint8_t ul_cqi,
-               const uint16_t rssi);
+               const uint16_t rssi,
+	       const uint8_t crcP,
+	       const double pusch_latency);
 
 void create_dl_harq_list(NR_UE_sched_ctrl_t *sched_ctrl, const NR_UE_ServingCell_Info_t *sc_info);
 

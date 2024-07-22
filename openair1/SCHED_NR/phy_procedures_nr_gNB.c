@@ -292,11 +292,16 @@ static void nr_postDecode(PHY_VARS_gNB *gNB, notifiedFIFO_elt_t *req)
   if (ulsch_harq->processedSegments == ulsch_harq->C) {
     // When the number of code blocks is 1 (C = 1) and ulsch_harq->processedSegments = 1, we can assume a good TB because of the
     // CRC check made by the LDPC for early termination, so, no need to perform CRC check twice for a single code block
-    printf("TBS: %u \n", ulsch_harq->TBS << 3);
+    //printf("TBS: %u \n", ulsch_harq->TBS << 3);
     bool crc_valid = true;
     if (ulsch_harq->C > 1) {
       crc_valid = check_crc(ulsch_harq->b, lenWithCrc(1, rdata->A), crcType(1, rdata->A));
     }
+    
+    pusch_pdu->out = rdtsc_oai();
+    //double latency = (double)(pusch_pdu->out - pusch_pdu->in) / (get_cpu_freq_GHz() * 1000.0);
+    //memcpy(&pdu->pusch_latency, &latency, sizeof(double));
+    pusch_pdu->pusch_latency = (double)(pusch_pdu->out - pusch_pdu->in) / (get_cpu_freq_GHz() * 1000.0);
 
     if (crc_valid && !check_abort(&ulsch_harq->abort_decode) && !gNB->pusch_vars[rdata->ulsch_id].DTX) {
       LOG_D(NR_PHY,
@@ -529,6 +534,7 @@ void nr_fill_indication(PHY_VARS_gNB *gNB, int frame, int slot_rx, int ULSCH_id,
   gNB->rx_pdu_list[num_rx].ul_cqi = cqi;
   gNB->rx_pdu_list[num_rx].timing_advance = timing_advance_update;
   gNB->rx_pdu_list[num_rx].rssi = gNB->crc_pdu_list[num_crc].rssi;
+  gNB->rx_pdu_list[num_rx].pusch_latency = pusch_pdu->pusch_latency;
   if (crc_flag)
     gNB->rx_pdu_list[num_rx].pdu_length = 0;
   else {
@@ -820,7 +826,7 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
       int num_dmrs = 0;
       for (int s = 0; s < NR_NUMBER_OF_SYMBOLS_PER_SLOT; s++)
         num_dmrs += (ulsch_harq->ulsch_pdu.ul_dmrs_symb_pos >> s) & 1;
-
+      nfapi_nr_pusch_pdu_t *pdu = &ulsch_harq->ulsch_pdu;
 #ifdef DEBUG_RXDATA
       NR_DL_FRAME_PARMS *frame_parms = &gNB->frame_parms;
       RU_t *ru = gNB->RU_list[0];
@@ -906,6 +912,9 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
       // LOG_M("rxdataF_comp.m","rxF_comp",gNB->pusch_vars[0]->rxdataF_comp[0],6900,1,1);
       // LOG_M("rxdataF_ext.m","rxF_ext",gNB->pusch_vars[0]->rxdataF_ext[0],6900,1,1);
       VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_NR_ULSCH_PROCEDURES_RX, 1);
+      
+      pdu->in = rdtsc_oai();
+      
       int const tasks_added = nr_ulsch_procedures(gNB, frame_rx, slot_rx, ULSCH_id, ulsch->harq_pid);
       if (tasks_added > 0)
         totalDecode += tasks_added; 

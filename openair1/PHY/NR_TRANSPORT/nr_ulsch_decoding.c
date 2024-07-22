@@ -788,6 +788,7 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
 
   if (decParams.BG == 1){
   //if (false){
+  //if (A > 928){
   	//printf("*** Using FPGA decoding, TBS: %d, rv_index: %d, max_iteration: %d\n", A, pusch_pdu->pusch_data.rv_index, decParams.numMaxIter);
   
   	notifiedFIFO_t nf_rfnoc;
