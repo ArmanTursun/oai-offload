@@ -300,12 +300,12 @@ int main(int argc, char **argv)
         break;
 
       case 'F':
-        input_fd = fopen(optarg, "r");
+        //input_fd = fopen(optarg, "r");
 
-        if (input_fd == NULL) {
-            printf("Problem with filename %s. Exiting.\n", optarg);
-            exit(-1);
-        }
+        //if (input_fd == NULL) {
+            //printf("Problem with filename %s. Exiting.\n", optarg);
+            //exit(-1);
+        //}
 
         break;
 
