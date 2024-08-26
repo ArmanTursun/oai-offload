@@ -657,7 +657,7 @@ static void _nr_rx_sdu(const module_id_t gnb_mod_idP,
     printf("\n");
 
 #endif
-
+/*
     //printf("[E2 Agent MAC_SDU]: TBS = %u, frame = %u, slot = %u, rnti = %d \n", sdu_lenP << 3, frameP, slotP, rntiP);
     NR_mac_stats_t *ulsch_mac_stats = &UE->mac_stats;
     NR_mac_ulsch_stats_t *ulsch_stats = &ulsch_mac_stats->ulsch_stats;
@@ -672,12 +672,10 @@ static void _nr_rx_sdu(const module_id_t gnb_mod_idP,
     ulsch_stats->number_of_tbs++;
     if (ulsch_stats->number_of_tbs == 10){
       ulsch_stats->number_of_tbs = 0;   // dummy method to prevent from fulling
-      //for (int aa = 0; aa < 50; aa++)
-	//ulsch_stats->tbs_list[aa] = NULL;
     }
     rc_tbs = pthread_mutex_unlock(&ulsch_stats->mutex);
     DevAssert(rc_tbs == 0);
-
+*/
     if (sduP != NULL){
       LOG_D(NR_MAC, "Received PDU at MAC gNB \n");
 
@@ -689,15 +687,15 @@ static void _nr_rx_sdu(const module_id_t gnb_mod_idP,
 
       
       //fprintf(file, "TBS,mcs,snr,crc,bler,latency\n");
-      if (sdu_lenP << 3 > 928){
-      	FILE *file = fopen("/home/nakaolab/openairinterface5g/test_data/fpga/latency/fpga_50M.csv", "a");
-      	if (file == NULL) {
-        	fprintf(stderr, "Error opening file.\n");
-        	return;
-      	}
-      	fprintf(file, "%u,%u,%d,%u,%f,%f\n", sdu_lenP << 3, UE_scheduling_control->ul_bler_stats.mcs, UE_scheduling_control->pusch_snrx10 / 10, ulsch_tbs->crc_check, UE_scheduling_control->ul_bler_stats.bler, pusch_latency);
-      	fclose(file);
-      }
+      //if (sdu_lenP << 3 > 928){
+      //	FILE *file = fopen("/home/nakaolab/openairinterface5g/test_data/fpga/latency/fpga_50M.csv", "a");
+      //	if (file == NULL) {
+      //  	fprintf(stderr, "Error opening file.\n");
+      //  	return;
+      //	}
+      //	fprintf(file, "%u,%u,%d,%u,%f,%f\n", sdu_lenP << 3, UE_scheduling_control->ul_bler_stats.mcs, UE_scheduling_control->pusch_snrx10 / 10, ulsch_tbs->crc_check, UE_scheduling_control->ul_bler_stats.bler, pusch_latency);
+      //	fclose(file);
+      //}
       //printf("[E2 Agent MAC_SDU]: TBS = %u, frame = %u, slot = %u, rnti = %d, latency = %9.5f, crc = %u, mcs = %u, snr = %d, bler = %f \n", sdu_lenP << 3, frameP, slotP, rntiP, pusch_latency, ulsch_tbs->crc_check, UE_scheduling_control->ul_bler_stats.mcs, UE_scheduling_control->pusch_snrx10 / 10, UE_scheduling_control->ul_bler_stats.bler);
       //printf("[E2 Agent MAC_SDU]: TBS = %u, latency = %f, crc = %u, mcs = %u, snr = %d, bler = %f \n", sdu_lenP << 3, pusch_latency, ulsch_tbs->crc_check, UE_scheduling_control->ul_bler_stats.mcs, UE_scheduling_control->pusch_snrx10 / 10, UE_scheduling_control->ul_bler_stats.bler);
       

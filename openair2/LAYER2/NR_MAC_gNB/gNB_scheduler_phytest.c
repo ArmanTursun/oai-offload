@@ -194,7 +194,7 @@ void nr_preprocessor_phytest(module_id_t module_id,
 }
 
 uint32_t target_ul_mcs = 9;
-uint32_t target_ul_bw = 50;
+uint32_t target_ul_bw = 500;
 uint32_t target_ul_Nl = 1;
 uint64_t ulsch_slot_bitmap = (1 << 8);
 bool nr_ul_preprocessor_phytest(module_id_t module_id, frame_t frame, sub_frame_t slot)

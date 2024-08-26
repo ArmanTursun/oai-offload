@@ -278,6 +278,7 @@ typedef struct {
   uint8_t handled;
   delay_t delay;
   ulsch_measurements_gNB ulsch_measurements;
+  bool ldpc_offload;
 } NR_gNB_ULSCH_t;
 
 typedef struct {

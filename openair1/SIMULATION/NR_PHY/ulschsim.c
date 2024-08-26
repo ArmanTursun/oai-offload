@@ -49,6 +49,7 @@
 #include "openair2/LAYER2/NR_MAC_COMMON/nr_mac_common.h"
 #include "executables/nr-uesoftmodem.h"
 #include "nfapi/oai_integration/vendor_ext.h"
+#include "/home/nakaolab/rfnoc_test.ldpc/include/ldpc_rfnoc_wrapper.h"
 
 //#define DEBUG_NR_ULSCHSIM
 
@@ -99,6 +100,10 @@ int nr_postDecode_sim(PHY_VARS_gNB *gNB, notifiedFIFO_elt_t *req, int *nb_ok)
 
   bool decodeSuccess = (rdata->decodeIterations <= rdata->decoderParms.numMaxIter);
   ulsch_harq->processedSegments++;
+  
+  //printf("rdata->decodeIterations %d \n", rdata->decodeIterations);
+  
+  //for (int i = 0; i < 16; i++) printf("harq->c[i]=%hhu \n",ulsch_harq->c[i]);
 
   if (decodeSuccess) {
     memcpy(ulsch_harq->b+rdata->offset,
@@ -124,7 +129,7 @@ int main(int argc, char **argv)
   char c;
   int i;
   double SNR, snr0 = -2.0, snr1 = 2.0, SNR_lin;
-  double snr_step = 0.1;
+  double snr_step = 1;
   uint8_t snr1set = 0;
   FILE *output_fd = NULL;
   //uint8_t write_output_file = 0;
@@ -143,7 +148,8 @@ int main(int argc, char **argv)
   int frame = 0, subframe = 0;
   NR_DL_FRAME_PARMS *frame_parms;
   double sigma;
-  unsigned char qbits = 8;
+  unsigned char qbits = 6;
+  int offload = 1, use_dpdk = 1;
   int ret=0;
   int loglvl = OAILOG_WARNING;
   uint64_t SSB_positions=0x01;
@@ -166,7 +172,7 @@ int main(int argc, char **argv)
   randominit(0);
 
   //while ((c = getopt(argc, argv, "df:hpg:i:j:n:l:m:r:s:S:y:z:M:N:F:R:P:")) != -1) {
-  while ((c = getopt(argc, argv, "hg:n:s:S:py:z:M:N:R:F:m:l:q:r:W:")) != -1) {
+  while ((c = getopt(argc, argv, "hg:n:o:k:s:S:py:z:M:N:R:F:m:l:q:r:W:")) != -1) {
     switch (c) {
       /*case 'f':
          write_output_file = 1;
@@ -233,6 +239,14 @@ int main(int argc, char **argv)
 #ifdef DEBUG_NR_ULSCHSIM
         printf("n_trials (-n) = %d\n", n_trials);
 #endif
+        break;
+      
+      case 'o':
+        offload = atoi(optarg);
+        break;
+      
+      case 'k':
+        use_dpdk = atoi(optarg);
         break;
 
       case 's':
@@ -352,6 +366,8 @@ int main(int argc, char **argv)
           //printf("-d Use TDD\n");
           printf("-s Starting SNR, runs from SNR0 to SNR0 + 5 dB.  If n_frames is 1 then just SNR is simulated\n");
           printf("-S Ending SNR, runs from SNR0 to SNR1\n");
+          printf("-o If 0 OAI, If 1 RFNoC, If 2 both, Default: 1\n");
+          printf("-k give 1 to use DPDK, Default: 1\n");
           printf("-p Use extended prefix mode\n");
           //printf("-t Delay spread for multipath channel\n");
           //printf("-x Transmission mode (1,2,6 for the moment)\n");
@@ -375,6 +391,18 @@ int main(int argc, char **argv)
           break;
     }
   }
+  
+  // create gnb rfnoc instance
+  void* wrapper_gnb = create_rfnoc_wrapper();
+  int instance_id_gnb = 0;
+  if ((offload == 1 || offload == 2) && use_dpdk == 1) {
+      instance_id_gnb = create_ldpc_instance(wrapper_gnb, true, 1);
+      //instance_id_ue = create_ldpc_instance(wrapper_ue, true, 0);
+  } else if (offload == 1 || offload == 2) {
+      instance_id_gnb = create_ldpc_instance(wrapper_gnb, false, 1);
+      //instance_id_ue = create_ldpc_instance(wrapper_ue, false, 0);
+  }
+  
 
   logInit();
   set_glog(loglvl);
@@ -407,8 +435,11 @@ int main(int argc, char **argv)
   gNB = RC.gNB[0];
   //gNB_config = &gNB->gNB_config;
 
-  initTpool("n", &gNB->threadPool, true);
+  initTpool("1,3,5,7,9,11", &gNB->threadPool, true);
   initNotifiedFIFO(&gNB->respDecode);
+  initNotifiedFIFO(&gNB->respDecode_pre);
+  initNotifiedFIFO(&gNB->respDecode_post);
+  
   frame_parms = &gNB->frame_parms; //to be initialized I suppose (maybe not necessary for PBCH)
   frame_parms->N_RB_DL = N_RB_DL;
   frame_parms->N_RB_UL = N_RB_UL;
@@ -421,6 +452,9 @@ int main(int argc, char **argv)
 
   gNB->frame_parms.nb_antennas_tx = 1;
   gNB->frame_parms.nb_antennas_rx = n_rx;
+  
+  gNB->wrapper_gnb = wrapper_gnb;
+  gNB->instance_id_gnb = instance_id_gnb;
 
   nr_phy_config_request_sim(gNB, N_RB_UL, N_RB_UL, mu, Nid_cell, SSB_positions);
   gNB->gNB_config.tdd_table.tdd_period.value = 6;
@@ -486,6 +520,10 @@ int main(int argc, char **argv)
   short channel_output_fixed[16 * 68 * 384];
   short channel_output_uncoded[16 * 68 * 384];
   unsigned int errors_bit_uncoded = 0;
+  unsigned int errors_bit = 0;
+  
+  unsigned char test_input_bit[16 * 68 * 384];
+  unsigned char estimated_output_bit[16 * 68 * 384];
 
   /////////////////////////[adk] preparing UL harq_process parameters/////////////////////////
   ///////////
@@ -504,10 +542,40 @@ int main(int argc, char **argv)
   harq_process_ul_ue->num_of_mod_symbols = N_RE_prime*nb_rb*nb_codewords;
   ulsch_ue->pusch_pdu.pusch_data.rv_index = rvidx;
   ulsch_ue->pusch_pdu.pusch_data.tb_size  = TBS>>3;
+  ulsch_ue->pusch_pdu.pusch_data.new_data_indicator = rvidx == 0 ? true : false;
   ulsch_ue->pusch_pdu.target_code_rate = code_rate;
   ulsch_ue->pusch_pdu.qam_mod_order = mod_order;
   ulsch_ue->pusch_pdu.ldpcBaseGraph = get_BG(TBS, code_rate);
   unsigned char *test_input = harq_process_ul_ue->payload_AB;
+  
+  
+  float Coderate = (float)code_rate / 10240.0f;
+  uint32_t A = TBS;
+  uint8_t coderate = 0;
+  if ((A <= 292) || ((A <= NR_MAX_PDSCH_TBS) && (Coderate <= 0.6667)) || Coderate <= 0.25) {
+      if (Coderate < 0.3333) {
+          coderate = 15;
+      }
+      else if (Coderate <0.6667) {
+          coderate = 13;
+      }
+      else {
+          coderate = 23;
+      }
+  }
+  else{
+      if (Coderate < 0.6667) {
+          coderate = 13;
+      }
+      else if (Coderate <0.8889) {
+          coderate = 23;
+      }
+      else {
+          coderate = 89;
+      }
+  }
+  printf("Encoder code rate: %d\n", coderate);
+  
 
   ///////////
   ////////////////////////////////////////////////////////////////////////////////////////////
@@ -516,18 +584,20 @@ int main(int argc, char **argv)
     test_input[i] = (unsigned char) rand();
 
 #ifdef DEBUG_NR_ULSCHSIM
-  for (i = 0; i < TBS / 8; i++) printf("test_input[i]=%hhu \n",test_input[i]);
+  for (i = 0; i < 16; i++) printf("test_input[i]=%hhu \n",test_input[i]);
 #endif
 
   /////////////////////////ULSCH coding/////////////////////////
   ///////////
   unsigned int G = available_bits;
 
-  if (input_fd == NULL) {
-    nr_ulsch_encoding(UE, ulsch_ue, frame_parms, harq_pid, TBS>>3, G);
-  }
+  //if (input_fd == NULL) {
+  nr_ulsch_encoding(UE, ulsch_ue, frame_parms, harq_pid, TBS>>3, G);
+  //}
   
   printf("\n");
+  
+  //for (i = 0; i < TBS / 8; i++) printf("encoded[%d]=%hhu \n",i,harq_process_ul_ue->f[i]);
 
   ///////////
   ////////////////////////////////////////////////////////////////////
@@ -535,6 +605,12 @@ int main(int argc, char **argv)
   for (SNR = snr0; SNR < snr1; SNR += snr_step) {
     n_errors = 0;
     n_false_positive = 0;
+    
+    double min_time_de_oai = 2000.0;
+    unsigned int min_error_bits_oai = TBS;
+    
+    double min_time_de_rfnoc = 2000.0;
+    unsigned int min_error_bits_rfnoc = TBS;
 
     for (trial = 0; trial < n_trials; trial++) {
 
@@ -579,28 +655,100 @@ int main(int argc, char **argv)
         if (channel_output_uncoded[i] != harq_process_ul_ue->f[i])
           errors_bit_uncoded = errors_bit_uncoded + 1;
       }
-/*
-      printf("errors bits uncoded %u\n", errors_bit_uncoded);
-      printf("\n");
-*/
+
+      //printf("errors bits uncoded %u\n", errors_bit_uncoded);
+      //printf("\n");
+
 #ifdef DEBUG_CODER
       printf("\n");
       exit(-1);
 #endif
-
-     int nbDecode = nr_ulsch_decoding(gNB, UE_id, channel_output_fixed, frame_parms, rel15_ul, frame, subframe, harq_pid, G);
-     int nb_ok = 0;
-     if (nbDecode > 0)
-       while (nbDecode > 0) {
-         notifiedFIFO_elt_t *req = pullTpool(&gNB->respDecode, &gNB->threadPool);
-         ret = nr_postDecode_sim(gNB, req, &nb_ok);
-         delNotifiedFIFO_elt(req);
-         nbDecode--;
-       }
+     
+      ////  oai decode
+      struct timespec start_de_oai, end_de_oai;
+      clock_gettime(CLOCK_MONOTONIC, &start_de_oai);
+      //int nbDecode = nr_ulsch_decoding(gNB, UE_id, channel_output_fixed, frame_parms, rel15_ul, frame, subframe, harq_pid, G,false);
+     
+      int nbDecode = nr_ulsch_decoding(gNB, UE_id, channel_output_fixed, frame_parms, rel15_ul, frame, subframe, harq_pid, G,false);
+     
+      int nb_ok = 0;
+      if (nbDecode > 0)
+        while (nbDecode > 0) {
+          notifiedFIFO_elt_t *req = pullTpool(&gNB->respDecode, &gNB->threadPool);
+          ret = nr_postDecode_sim(gNB, req, &nb_ok);
+          delNotifiedFIFO_elt(req);
+          nbDecode--;
+        }
+     
+      clock_gettime(CLOCK_MONOTONIC, &end_de_oai);
+      double time_de_oai = (end_de_oai.tv_nsec - start_de_oai.tv_nsec) / 1000.0/get_cpu_freq_GHz();
+      //if (time_de_oai > 0 && time_de_oai < min_time_de_oai)
+      if (time_de_oai > 0)
+      	 //min_time_de_oai = time_de_oai;
+         min_time_de_oai += time_de_oai;
+     
+     
+      ////  rfnoc decode
+      if (offload > 0){
+     
+     	struct timespec start_de_rfnoc, end_de_rfnoc;
+     	clock_gettime(CLOCK_MONOTONIC, &start_de_rfnoc);
+     
+     	int nbDecode = nr_ulsch_decoding(gNB, UE_id, channel_output_fixed, frame_parms, rel15_ul, frame, subframe, harq_pid, G,true);
+      
+     
+     	int nb_ok = 0;
+     	if (nbDecode > 0)
+          while (nbDecode > 0) {
+            notifiedFIFO_elt_t *req; // = pullTpool(&gNB->respDecode, &gNB->threadPool);
+            if (ulsch_ue->pusch_pdu.ldpcBaseGraph == 1){
+              req = pullTpool(&gNB->respDecode_post, &gNB->threadPool);
+            } else {
+              req = pullTpool(&gNB->respDecode, &gNB->threadPool);
+            }
+            ret = nr_postDecode_sim(gNB, req, &nb_ok);
+            delNotifiedFIFO_elt(req);
+            nbDecode--;
+          }
+         
+        clock_gettime(CLOCK_MONOTONIC, &end_de_rfnoc);
+        double time_de_rfnoc = (end_de_rfnoc.tv_nsec - start_de_rfnoc.tv_nsec) / 1000.0/get_cpu_freq_GHz();
+     
+        //if (time_de_rfnoc > 0 && time_de_rfnoc < min_time_de_rfnoc)
+        if (time_de_rfnoc > 0)
+      	   //min_time_de_rfnoc = time_de_rfnoc;    
+      	   min_time_de_rfnoc += time_de_rfnoc; 
+      }
 
       if (ret)
         n_errors++;
+        
+      //count errors
+      //unsigned int errors_bit = 0;
+
+      for (int i = 0; i < TBS; i++) {
+        estimated_output_bit[i] = (ulsch_gNB->harq_process->b[i/8] & (1 << (i & 7))) >> (i & 7);
+        test_input_bit[i] = (test_input[i / 8] & (1 << (i & 7))) >> (i & 7); // Further correct for multiple segments
+
+        if (estimated_output_bit[i] != test_input_bit[i]) {
+          errors_bit++;
+        }
+      }
+      
+      if (errors_bit > 0) {
+        n_false_positive++;
+      }
+      
+      if (min_error_bits_rfnoc > errors_bit)
+      	min_error_bits_rfnoc = errors_bit;
+      
     }
+    
+    //for (i = 0; i < 16; i++) printf("estimated[i]=%hhu \n",ulsch_gNB->harq_process->b[i]);
+    
+    printf("Total Decode Time OAI: %lf us\n", min_time_de_oai / (float)n_trials);
+    printf("Total Decode Time RFNOC: %lf us\n", min_time_de_rfnoc / (float)n_trials);
+    printf("errors_bit: %u (trial %d)\n", min_error_bits_rfnoc, trial);
     
     printf("*****************************************\n");
     printf("SNR %f, BLER %f (false positive %f)\n", SNR,
@@ -641,7 +789,10 @@ int main(int argc, char **argv)
 
   loader_reset();
   logTerm();
-
+  
+  release_ldpc_instance(wrapper_gnb, instance_id_gnb);
+  delete_rfnoc_wrapper(wrapper_gnb);
+  
   return (n_errors);
 }
 

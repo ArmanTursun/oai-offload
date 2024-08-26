@@ -49,6 +49,7 @@ int nr_ulsch_encoding(PHY_VARS_NR_UE *ue,
                       unsigned int G)
 {
   start_meas(&ue->ulsch_encoding_stats);
+  //printf("sss\n");
 
   /////////////////////////parameters and variables initialization/////////////////////////
 
@@ -234,6 +235,9 @@ int nr_ulsch_encoding(PHY_VARS_NR_UE *ue,
       r_offset += impp.E;
     }
   }
+  
+  //for (int i = 0; i < 16; i++)
+        //printf("output interleaving f[%d]= %d r_offset %u\n", i, harq_process->f[i+r_offset], r_offset);
   ///////////////////////////////////////////////////////////////////////////////////////////////
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_NR_UE_ULSCH_ENCODING, VCD_FUNCTION_OUT);
   stop_meas(&ue->ulsch_encoding_stats);

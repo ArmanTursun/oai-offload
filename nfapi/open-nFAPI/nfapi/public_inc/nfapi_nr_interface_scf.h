@@ -1246,8 +1246,8 @@ typedef struct
   //pusch_ctrl_fapi_t pusch_list[10];
   uint32_t offload_ind;
   //time_stats_t ulsch_ldpc_decoding_stats;
-  struct timespec start_en;
-  struct timespec end_en;
+  //struct timespec start_en;
+  //struct timespec end_en;
   
   long long in;
   long long out;

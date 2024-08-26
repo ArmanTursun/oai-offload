@@ -222,6 +222,8 @@ static void nr_processULSegment(void *arg)
   rdata->decodeIterations =
       ldpc_interface.LDPCdecoder(p_decoderParms, 0, 0, 0, l, llrProcBuf, p_procTime, &ulsch_harq->abort_decode);
 
+  //printf("interation %d\n", rdata->decodeIterations);
+  //for (int i = 0; i < 16; i++) printf("llrProcBuf[i]=%hhu \n",llrProcBuf[i]);
   if (rdata->decodeIterations <= p_decoderParms->numMaxIter)
     memcpy(ulsch_harq->c[r],llrProcBuf,  Kr>>3);
 }
@@ -667,7 +669,8 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
                       uint32_t frame,
                       uint8_t nr_tti_rx,
                       uint8_t harq_pid,
-                      uint32_t G)
+                      uint32_t G,
+                      bool rfnoc_offload)
 {
   if (!ulsch_llr) {
     LOG_E(PHY, "ulsch_decoding.c: NULL ulsch_llr pointer\n");
@@ -786,9 +789,9 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
   //int no_iteration_ldpc[MAX_NUM_NR_DLSCH_SEGMENTS_PER_LAYER*NR_MAX_NB_LAYERS];
 
 
-  if (decParams.BG == 1){
+  //if (rfnoc_offload){
   //if (false){
-  //if (A > 928){
+  if (rfnoc_offload && ulsch->ldpc_offload){
   	//printf("*** Using FPGA decoding, TBS: %d, rv_index: %d, max_iteration: %d\n", A, pusch_pdu->pusch_data.rv_index, decParams.numMaxIter);
   
   	notifiedFIFO_t nf_rfnoc;
@@ -799,17 +802,6 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
     		union ldpcReqUnion id = {.s = {ulsch->rnti, frame, nr_tti_rx, 0, A}};
     		//union ldpcReqUnion id = {.s = {0, 0, 0, 0, A}};
             notifiedFIFO_elt_t *req = NULL;
-            //if (r < harq_process->C / 2) {
-            //    req = newNotifiedFIFO_elt(sizeof(ldpcDecode_t), id.s.spare,
-            //                                                  &phy_vars_gNB->respDecode_pre_1,
-            //                                                  &nr_processULRFNoC_preDecode);
-            //    phy_vars_gNB->nbDecode_1++;
-            //} else {
-            //    req = newNotifiedFIFO_elt(sizeof(ldpcDecode_t), id.s.spare,
-            //                                                  &phy_vars_gNB->respDecode_pre_2,
-            //                                                  &nr_processULRFNoC_preDecode);
-            //    phy_vars_gNB->nbDecode_2++;
-            //}
             req = newNotifiedFIFO_elt(sizeof(ldpcDecode_t), id.s.spare, &phy_vars_gNB->respDecode_pre, &nr_processULRFNoC_preDecode);
     		ldpcDecode_t *rdata = (ldpcDecode_t *)NotifiedFifoData(req);
     		decParams.R = nr_get_R_ldpc_decoder(pusch_pdu->pusch_data.rv_index,
@@ -844,21 +836,9 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
     		r_offset += E;
     		offset += ((harq_process->K >> 3) - (harq_process->F >> 3) - ((harq_process->C > 1) ? 3 : 0));
   	}
-/*
-    //int decode_num = 0;
-    while (phy_vars_gNB->nbDecode_1 > 0) {
-          notifiedFIFO_elt_t *req = pullTpool(&phy_vars_gNB->respDecode_pre_1, &phy_vars_gNB->threadPool_LDPC_de);
-          //notifiedFIFO_elt_t *req = pullTpool(&nf_rfnoc, &phy_vars_gNB->threadPool_LDPC_de);
-          if (req == NULL)
-              break; // Tpool has been stopped
-          phy_vars_gNB->nbDecode_1--;
-          delNotifiedFIFO_elt(req);
-          //decode_num++;
-    }
-*/
+
   	while (jobs_pre > 0) {
           notifiedFIFO_elt_t *req = pullTpool(&phy_vars_gNB->respDecode_pre, &phy_vars_gNB->threadPool);
-          //notifiedFIFO_elt_t *req = pullTpool(&nf_rfnoc, &phy_vars_gNB->threadPool_LDPC_de);
           if (req == NULL)
               break; // Tpool has been stopped
           jobs_pre--;
@@ -867,21 +847,11 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
 
   	r_offset = 0;
   	offset = 0;
-    //uint32_t num_requested_samples_de = floor((decParams.Z * Kb + 127) / 128) * 128 / 32;
   	for (int r = 0; r < harq_process->C; r++) {
   			//printf("requested samples in round %d: %d\n", r, num_requested_samples_de);
     		int E = nr_get_E(G, harq_process->C, Qm, n_layers, r);
     		union ldpcReqUnion id = {.s = {ulsch->rnti, frame, nr_tti_rx, 1, A}};
-    		//union ldpcReqUnion id = {.s = {0, 0, 0, 0, A+1}};
-            //notifiedFIFO_elt_t *req = NULL;
-            //if (r < harq_process->C / 2){
-            //    req = newNotifiedFIFO_elt(sizeof(ldpcDecode_t), id.s.spare, &phy_vars_gNB->respDecode_post_1, &nr_processULRFNoC_postDecode);
-            //    phy_vars_gNB->nbDecode_1++;
-            //} else {
-            //    req = newNotifiedFIFO_elt(sizeof(ldpcDecode_t), id.s.spare, &phy_vars_gNB->respDecode_post_2, &nr_processULRFNoC_postDecode);
-            //    phy_vars_gNB->nbDecode_2++;
-            //}
-    		notifiedFIFO_elt_t *req = newNotifiedFIFO_elt(sizeof(ldpcDecode_t), id.s.spare, &phy_vars_gNB->respDecode_post, &nr_processULRFNoC_postDecode);
+    		notifiedFIFO_elt_t *req = newNotifiedFIFO_elt(sizeof(ldpcDecode_t), id.s.spare, &phy_vars_gNB->respDecode, &nr_processULRFNoC_postDecode);
     		ldpcDecode_t *rdata = (ldpcDecode_t *)NotifiedFifoData(req);
     		decParams.R = nr_get_R_ldpc_decoder(pusch_pdu->pusch_data.rv_index,
                                         E,

@@ -39,11 +39,53 @@
 #include "nfapi/oai_integration/vendor_ext.h"
 #include "assertions.h"
 #include <time.h>
-
+#include "quantile_forest.h"
 //#define DEBUG_RXDATA
 //#define SRS_IND_DEBUG
 
 extern uint8_t nfapi_mode;
+
+int topsis(float cpu_latency, float fpga_latency, float cpu_energy, float fpga_energy, float weight1, float weight2) {
+    
+    // Simplified TOPSIS
+    float latency_norm_factor = sqrt(cpu_latency * cpu_latency + fpga_latency * fpga_latency);
+    float energy_norm_factor = sqrt(cpu_energy * cpu_energy + fpga_energy * fpga_energy);
+
+    // Normalize values (inverted for 'lower is better')
+    float A = cpu_latency / latency_norm_factor * weight1;
+    float B = fpga_latency / latency_norm_factor * weight1;
+    float C = cpu_energy / energy_norm_factor * weight2;
+    float D = fpga_energy / energy_norm_factor * weight2;  
+    
+    // Calculate ideal (best case) and negative-ideal (worst case) values
+    float AB, CD, ABCD, score_cpu, score_fpga;
+    if (A < B){
+        AB = B - A;
+        if (C < D){
+            score_cpu = 1;
+            score_fpga = 0;
+        } else {
+            CD = C - D;
+            ABCD = AB + CD;
+            score_cpu = AB / ABCD;
+            score_fpga = CD / ABCD;
+        }
+    } else {
+        AB = A - B;
+        if (C < D){
+            CD = D - C;
+            ABCD = AB + CD;
+            score_cpu = CD / ABCD;
+            score_fpga = AB / ABCD;
+        } else {
+            score_cpu = 0;
+            score_fpga = 1;
+        }
+    }
+ 
+    return (score_cpu >= score_fpga) ? 0 : 1;
+}
+
 
 void nr_common_signal_procedures(PHY_VARS_gNB *gNB,int frame,int slot, nfapi_nr_dl_tti_ssb_pdu ssb_pdu)
 {
@@ -342,6 +384,7 @@ static void nr_postDecode(PHY_VARS_gNB *gNB, notifiedFIFO_elt_t *req)
       nr_fill_indication(gNB, ulsch->frame, ulsch->slot, rdata->ulsch_id, rdata->harq_pid, 1, 0);
       ulsch->handled = 1;
       LOG_D(PHY, "ULSCH %d in error\n",rdata->ulsch_id);
+      //printf("*************************************************************************************************\n");
       //      dumpsig=1;
     }
     ulsch->last_iteration_cnt = rdata->decodeIterations;
@@ -436,10 +479,18 @@ static int nr_ulsch_procedures(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx, int
    * (valid for unitary physical simulators). ULSCH processing lopp is then executed
    * only once, which ensures exactly one start and stop of the ULSCH decoding time
    * measurement per processed TB.*/
+  
+  uint32_t ldpc_tbs = pusch_pdu->pusch_data.tb_size;
+  uint8_t bg = pusch_pdu->maintenance_parms_v3.ldpcBaseGraph;
+  bool rfnoc_offload = false;
+  
+  if (bg == 1)
+  	rfnoc_offload = true;
+  
   if (gNB->max_nb_pusch == 1)
     start_meas(&gNB->ulsch_decoding_stats);
   int nbDecode =
-      nr_ulsch_decoding(gNB, ULSCH_id, gNB->pusch_vars[ULSCH_id].llr, frame_parms, pusch_pdu, frame_rx, slot_rx, harq_pid, G);
+      nr_ulsch_decoding(gNB, ULSCH_id, gNB->pusch_vars[ULSCH_id].llr, frame_parms, pusch_pdu, frame_rx, slot_rx, harq_pid, G, rfnoc_offload);
 
   return nbDecode;
 }
@@ -913,6 +964,28 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
       // LOG_M("rxdataF_ext.m","rxF_ext",gNB->pusch_vars[0]->rxdataF_ext[0],6900,1,1);
       VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_NR_ULSCH_PROCEDURES_RX, 1);
       
+      int SNRtimes10 = dB_fixed_x10(gNB->pusch_vars[ULSCH_id].ulsch_power_tot) - dB_fixed_x10(gNB->pusch_vars[ULSCH_id].ulsch_noise_power_tot);
+
+      
+      float features[2];
+      float results[4][3];
+      struct timespec start_time_qrf, end_time_qrf, start_time_topsis, end_time_topsis;
+      double latency_qrf, latency_topsis;
+      
+      features[0] = (float)(pdu->pusch_data.tb_size << 3);
+      features[1] = (float)pdu->mcs_index;
+      
+      clock_gettime(CLOCK_REALTIME, &start_time_qrf);
+      predict_forest(features, results);
+      clock_gettime(CLOCK_REALTIME, &end_time_qrf);
+      latency_qrf = end_time_qrf.tv_nsec / 1000.0 - start_time_qrf.tv_nsec / 1000.0;
+      
+      gNB->ulsch[ULSCH_id].ldpc_offload = false;
+      clock_gettime(CLOCK_REALTIME, &start_time_topsis);
+      gNB->ulsch[ULSCH_id].ldpc_offload = topsis(results[0][1], results[2][1], results[1][1], results[3][1], 0.5, 0.5) == 0 ? false : true;
+      clock_gettime(CLOCK_REALTIME, &end_time_topsis);
+      latency_topsis = end_time_topsis.tv_nsec / 1000.0 - start_time_topsis.tv_nsec / 1000.0; 
+
       pdu->in = rdtsc_oai();
       
       int const tasks_added = nr_ulsch_procedures(gNB, frame_rx, slot_rx, ULSCH_id, ulsch->harq_pid);
@@ -921,24 +994,16 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
 
       VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_NR_ULSCH_PROCEDURES_RX, 0);
       
-      nfapi_nr_pusch_pdu_t *pusch_pdu = &gNB->ulsch[ULSCH_id].harq_process->ulsch_pdu;
-      int bg = pusch_pdu->maintenance_parms_v3.ldpcBaseGraph;
+      //nfapi_nr_pusch_pdu_t *pusch_pdu = &gNB->ulsch[ULSCH_id].harq_process->ulsch_pdu;
+      //int bg = pusch_pdu->maintenance_parms_v3.ldpcBaseGraph;
       //int decode_num = 0;
       while (totalDecode > 0) {
           notifiedFIFO_elt_t *req = NULL;
-          if (bg == 1){
-          //if (false){
-              //if (gNB->nbDecode_1 > 0){
-              //    req = pullTpool(&gNB->respDecode_post_1, &gNB->threadPool_LDPC_de);
-              //    gNB->nbDecode_1--;
-              //} else if (gNB->nbDecode_2 > 0){
-              //    req = pullTpool(&gNB->respDecode_post_2, &gNB->threadPool_LDPC_de);
-              //    gNB->nbDecode_2--;
-              //}
-              req = pullTpool(&gNB->respDecode_post, &gNB->threadPool);
-          } else {
-              req = pullTpool(&gNB->respDecode, &gNB->threadPool);
-          }
+          //if (bg == 1){
+              //req = pullTpool(&gNB->respDecode_post, &gNB->threadPool_LDPC_de);
+          //} else {
+          req = pullTpool(&gNB->respDecode, &gNB->threadPool);
+          //}
           //notifiedFIFO_elt_t *req = pullTpool(&gNB->respDecode, &gNB->threadPool);
           if (req == NULL)
               break; // Tpool has been stopped
@@ -946,6 +1011,13 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
           delNotifiedFIFO_elt(req);
           totalDecode--;
       }
+      FILE *file = fopen("/home/nakaolab/openairinterface5g/test_data/ulsch/pwr/fpga/29_100_latency.csv", "a");
+      if (file == NULL) {
+        fprintf(stderr, "Error opening file.\n");
+        exit(EXIT_FAILURE);
+      }
+      fprintf(file, "%u,%u,%f,%f,%llu,%d,%f,%f\n", pdu->pusch_data.tb_size << 3, pdu->mcs_index, SNRtimes10 / 10.0, pdu->pusch_latency, (unsigned long long)rdtsc_oai(), gNB->ulsch[ULSCH_id].ldpc_offload ? 1:0, latency_qrf, latency_topsis);
+      fclose(file);
     
     }
   }
