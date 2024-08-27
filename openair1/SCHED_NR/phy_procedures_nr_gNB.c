@@ -1011,7 +1011,7 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
           delNotifiedFIFO_elt(req);
           totalDecode--;
       }
-      FILE *file = fopen("/home/nakaolab/openairinterface5g/test_data/ulsch/pwr/fpga/29_100_latency.csv", "a");
+      FILE *file = fopen("/home/nakaolab/openairinterface5g/test_data/ulsch/pwr/fpga/random_phytest_oai.csv", "a");
       if (file == NULL) {
         fprintf(stderr, "Error opening file.\n");
         exit(EXIT_FAILURE);

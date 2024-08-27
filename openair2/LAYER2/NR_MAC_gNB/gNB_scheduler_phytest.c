@@ -249,10 +249,16 @@ bool nr_ul_preprocessor_phytest(module_id_t module_id, frame_t frame, sub_frame_
   const int bw = ul_bwp->BWPSize;
   const int BWPStart = ul_bwp->BWPStart;
 
-  if (target_ul_bw>bw)
-    rbSize = bw;
-  else
-    rbSize = target_ul_bw;
+  //if (target_ul_bw>bw)
+    //rbSize = bw;
+  //else
+    //rbSize = target_ul_bw;
+    
+  // Generate a random MCS value between 9 and 28
+  uint32_t target_mcs = rand() % (28 - 9 + 1) + 9;
+
+  // Generate a random PRB value (either 50 or 75)
+  rbSize = (rand() % 2) ? 75 : 50;
 
   NR_tda_info_t tda_info = get_ul_tda_info(ul_bwp,
                                            sched_ctrl->coreset->controlResourceSetId,
@@ -292,7 +298,7 @@ bool nr_ul_preprocessor_phytest(module_id_t module_id, frame_t frame, sub_frame_
 
   sched_ctrl->cce_index = CCEIndex;
 
-  const int mcs = target_ul_mcs;
+  const int mcs = target_mcs; //target_ul_mcs;
   NR_sched_pusch_t *sched_pusch = &sched_ctrl->sched_pusch;
   sched_pusch->mcs = mcs;
   sched_ctrl->ul_bler_stats.mcs = mcs; /* for logging output */
