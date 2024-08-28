@@ -1227,6 +1227,7 @@ typedef struct
   uint8_t  rb_bitmap[36];//
   uint16_t rb_start;
   uint16_t rb_size;
+  uint16_t nb_dmrs_prb;
   uint8_t  vrb_to_prb_mapping;
   uint8_t  frequency_hopping;
   uint16_t tx_direct_current_location;//The uplink Tx Direct Current location for the carrier. Only values in the value range of this field between 0 and 3299, which indicate the subcarrier index within the carrier corresponding 1o the numerology of the corresponding uplink BWP and value 3300, which indicates "Outside the carrier" and value 3301, which indicates "Undetermined position within the carrier" are used. [TS38.331, UplinkTxDirectCurrentBWP IE]
