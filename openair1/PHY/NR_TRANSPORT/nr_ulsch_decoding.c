@@ -789,8 +789,8 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
   //int no_iteration_ldpc[MAX_NUM_NR_DLSCH_SEGMENTS_PER_LAYER*NR_MAX_NB_LAYERS];
 
 
-  //if (rfnoc_offload){
-  if (false){
+  if (rfnoc_offload){
+  //if (false){
   //if (rfnoc_offload && ulsch->ldpc_offload){
   	//printf("*** Using FPGA decoding, TBS: %d, rv_index: %d, max_iteration: %d\n", A, pusch_pdu->pusch_data.rv_index, decParams.numMaxIter);
   
