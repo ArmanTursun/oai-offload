@@ -790,8 +790,8 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
 
 
   //if (rfnoc_offload){
-  if (false){
-  //if (rfnoc_offload && ulsch->ldpc_offload){
+  //if (false){
+  if (ulsch->ldpc_offload){
   	//printf("*** Using FPGA decoding, TBS: %d, rv_index: %d, max_iteration: %d\n", A, pusch_pdu->pusch_data.rv_index, decParams.numMaxIter);
   
   	notifiedFIFO_t nf_rfnoc;

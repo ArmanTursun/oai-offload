@@ -56,6 +56,15 @@ bool read_mac_sm(void* data)
   UE_iterator(UE_info->list, UE) {
     const NR_UE_sched_ctrl_t* sched_ctrl = &UE->UE_sched_ctrl;
     mac_ue_stats_impl_t* rd = &mac->msg.ue_stats[i];
+
+    NR_mac_ulsch_stats_t *ulsch_stats = &UE->mac_stats.ulsch_stats;
+    int rc_tbs = pthread_mutex_lock(&ulsch_stats->mutex);
+    DevAssert(rc_tbs == 0);
+
+    if(ulsch_stats->number_of_tbs > 0){
+    	rd->tbs = calloc(ulsch_stats->number_of_tbs, sizeof(tbs_stats_t));
+    	assert(rd->tbs!= NULL && "Memory exhausted" );
+    }
     
     rd->rnti = UE->rnti;
     
@@ -73,7 +82,19 @@ bool read_mac_sm(void* data)
     rd->context.phr = sched_ctrl->ph;
     
     // TODO add tbs to each UE
-    //rd->num_tbs = num_tbs;
+    rd->num_tbs = ulsch_stats->number_of_tbs;
+    for (int tbs_id = 0; tbs_id < ulsch_stats->number_of_tbs; tbs_id++){
+      ulsch_tbs_stats_t *ulsch_tbs = &ulsch_stats->tbs_list[tbs_id];
+      d->tbs[tbs_id] = ulsch_tbs->tbs;
+      rd->tbs_frame[tbs_id] = ulsch_tbs->frame;
+      rd->tbs_slot[tbs_id] = ulsch_tbs->slot;
+      rd->tbs_latency[tbs_id] = ulsch_tbs->latency;
+      rd->tbs_crc[tbs_id] = ulsch_tbs->crc_check;
+    }
+
+    ulsch_stats->number_of_tbs = 0;
+    rc_tbs = pthread_mutex_unlock(&ulsch_stats->mutex);
+    DevAssert(rc_tbs == 0);
     
     //rd->tbs = calloc(NUM_UES, sizeof(mac_tbs_stats_t));
     //assert(rd->tbs != NULL && "memory exhausted");
@@ -106,16 +127,17 @@ sm_ag_if_ans_t write_ctrl_mac_sm(void const* data)
 {
   assert(data != NULL);
   //assert(0 !=0 && "Not supported");
-  //mac_ctrl_req_data_t const* mac_req_ctrl = (mac_ctrl_req_data_t const* )data;
-  //mac_ctrl_msg_t const* msg = &mac_req_ctrl->msg;
-  //PHY_VARS_gNB *gNB;
-  //gNB = RC.gNB[0];
+  mac_ctrl_req_data_t const* mac_req_ctrl = (mac_ctrl_req_data_t const* )data;
+  mac_ctrl_msg_t const* msg = &mac_req_ctrl->msg;
+  PHY_VARS_gNB *gNB;
+  gNB = RC.gNB[0];
   
   // TODO copy offload indication to each UE
-  //for (uint32_t i = 0; i < msg->num_ues; i++){
-  //	mac_ue_ctrl_t* ue = msg->ues[i];
-  //	ue->offload = 1;
-  //}
+  for (uint32_t i = 0; i < msg->num_ues; i++){
+  	mac_ue_ctrl_t* ue = msg->ues[i];
+  	//ue->offload = 1;
+    gNB->ldpc_offload = ue->offload;
+  }
   	
   //printf("[E2 Agent Control]: ldpc_offload = %d, Timestamp = %" PRId64 "\n", msg->offload, msg->tms);
   sm_ag_if_ans_t ans = {.type = CTRL_OUTCOME_SM_AG_IF_ANS_V0};

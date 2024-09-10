@@ -657,7 +657,7 @@ static void _nr_rx_sdu(const module_id_t gnb_mod_idP,
     printf("\n");
 
 #endif
-/*
+
     //printf("[E2 Agent MAC_SDU]: TBS = %u, frame = %u, slot = %u, rnti = %d \n", sdu_lenP << 3, frameP, slotP, rntiP);
     NR_mac_stats_t *ulsch_mac_stats = &UE->mac_stats;
     NR_mac_ulsch_stats_t *ulsch_stats = &ulsch_mac_stats->ulsch_stats;
@@ -675,7 +675,7 @@ static void _nr_rx_sdu(const module_id_t gnb_mod_idP,
     }
     rc_tbs = pthread_mutex_unlock(&ulsch_stats->mutex);
     DevAssert(rc_tbs == 0);
-*/
+
     if (sduP != NULL){
       LOG_D(NR_MAC, "Received PDU at MAC gNB \n");
 

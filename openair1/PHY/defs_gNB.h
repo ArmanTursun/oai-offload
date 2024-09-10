@@ -637,7 +637,7 @@ typedef struct PHY_VARS_gNB_s {
   uint32_t ofdm_offset_divisor;
 
   int ldpc_offload_flag;
-  int ldpc_offload;
+  float ldpc_offload;
 
   uint8_t sc_idx;   // Xilinx LDPC scaling index (0-15)
   unsigned char qbits; // quantization index 

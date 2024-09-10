@@ -1245,7 +1245,7 @@ typedef struct
   nfapi_v3_pdsch_maintenance_parameters_t maintenance_parms_v3;
   double pusch_latency;
   //pusch_ctrl_fapi_t pusch_list[10];
-  uint32_t offload_ind;
+  float offload_ind;
   //time_stats_t ulsch_ldpc_decoding_stats;
   //struct timespec start_en;
   //struct timespec end_en;

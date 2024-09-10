@@ -982,7 +982,7 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
       
       gNB->ulsch[ULSCH_id].ldpc_offload = false;
       clock_gettime(CLOCK_REALTIME, &start_time_topsis);
-      gNB->ulsch[ULSCH_id].ldpc_offload = topsis(results[0][1], results[2][1], results[1][1], results[3][1], 0.5, 0.5) == 0 ? false : true;
+      gNB->ulsch[ULSCH_id].ldpc_offload = topsis(results[0][1], results[2][1], results[1][1], results[3][1], 1.0 - gNB->ldpc_offload, gNB->ldpc_offload) == 0 ? false : true;
       clock_gettime(CLOCK_REALTIME, &end_time_topsis);
       latency_topsis = end_time_topsis.tv_nsec / 1000.0 - start_time_topsis.tv_nsec / 1000.0; 
 
@@ -1011,6 +1011,7 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
           delNotifiedFIFO_elt(req);
           totalDecode--;
       }
+      /*
       FILE *file = fopen("/home/nakaolab/openairinterface5g/test_data/ulsch/pwr/fpga_phytest/random_phytest_fpga.csv", "a");
       if (file == NULL) {
         fprintf(stderr, "Error opening file.\n");
@@ -1019,6 +1020,7 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
       fprintf(file, "%u,%u,%u,%u,%u,%u,%u,%u,%f,%f,%llu\n", pdu->pusch_data.tb_size << 3, pdu->mcs_index, pdu->qam_mod_order, pdu->target_code_rate, pdu->rb_size, pdu->nr_of_symbols, pdu->nb_dmrs_prb, pdu->nrOfLayers, SNRtimes10 / 10.0, pdu->pusch_latency, (unsigned long long)rdtsc_oai());
       //fprintf(file, "%u,%u,%u,%u,%u,%u,%u,%u,%f,%f,%llu,%d,%f,%f\n", pdu->pusch_data.tb_size << 3, pdu->mcs_index, pdu->qam_mod_order, pdu->target_code_rate, pdu->rb_size, pdu->nr_of_symbols, pdu->nb_dmrs_prb, pdu->nrOfLayers, SNRtimes10 / 10.0, pdu->pusch_latency, (unsigned long long)rdtsc_oai(), gNB->ulsch[ULSCH_id].ldpc_offload ? 1:0, latency_qrf, latency_topsis);
       fclose(file);
+      */
     }
   }
   /*
