@@ -33,7 +33,7 @@
 #include "CUSTOMIZED/ran_func_gtp.h"
 #include "CUSTOMIZED/ran_func_pdcp.h"
 #endif
-
+#include "CUSTOMIZED/ran_func_mac.h"
 #include "O-RAN/ran_func_kpm.h"
 #include "O-RAN/ran_func_rc.h"
 
@@ -50,7 +50,7 @@ void init_read_ind_tbl(read_ind_fp (*read_ind_tbl)[SM_AGENT_IF_READ_V0_END])
   (*read_ind_tbl)[GTP_STATS_V0] = read_gtp_sm ; 
   (*read_ind_tbl)[PDCP_STATS_V0] = read_pdcp_sm ;
   #endif
-  
+  //(*read_ind_tbl)[MAC_STATS_V0] =  read_mac_sm;
   (*read_ind_tbl)[KPM_STATS_V3_0] = read_kpm_sm ; 
   (*read_ind_tbl)[RAN_CTRL_STATS_V1_03] = read_rc_sm;
 }
@@ -68,7 +68,7 @@ void init_read_setup_tbl(read_e2_setup_fp (*read_setup_tbl)[SM_AGENT_IF_E2_SETUP
   (*read_setup_tbl)[GTP_AGENT_IF_E2_SETUP_ANS_V0] = read_gtp_setup_sm ; 
   (*read_setup_tbl)[PDCP_AGENT_IF_E2_SETUP_ANS_V0] = read_pdcp_setup_sm ;
   #endif
-
+  //(*read_setup_tbl)[MAC_AGENT_IF_E2_SETUP_ANS_V0] =  read_mac_setup_sm;
   (*read_setup_tbl)[KPM_V3_0_AGENT_IF_E2_SETUP_ANS_V0] = read_kpm_setup_sm ; 
   (*read_setup_tbl)[RAN_CTRL_V1_3_AGENT_IF_E2_SETUP_ANS_V0] = read_rc_setup_sm;
 }
@@ -86,7 +86,7 @@ void init_write_ctrl( write_ctrl_fp (*write_ctrl_tbl)[SM_AGENT_IF_WRITE_CTRL_V0_
   (*write_ctrl_tbl)[GTP_CTRL_REQ_V0] = write_ctrl_gtp_sm;
   (*write_ctrl_tbl)[PDCP_CTRL_REQ_V0] = write_ctrl_pdcp_sm;
   #endif
-
+  //(*write_ctrl_tbl)[MAC_CTRL_REQ_V0] = write_ctrl_mac_sm;
   (*write_ctrl_tbl)[RAN_CONTROL_CTRL_V1_03] = write_ctrl_rc_sm;
 }
 
@@ -103,7 +103,7 @@ void init_write_subs(write_subs_fp (*write_subs_tbl)[SM_AGENT_IF_WRITE_SUBS_V0_E
   (*write_subs_tbl)[GTP_SUBS_V0] = NULL;
   (*write_subs_tbl)[PDCP_SUBS_V0] = NULL;
   #endif
-
+  //(*write_subs_tbl)[MAC_SUBS_V0] = NULL;
   (*write_subs_tbl)[KPM_SUBS_V3_0] = NULL;
   (*write_subs_tbl)[RAN_CTRL_SUBS_V1_03] = write_subs_rc_sm;
 }

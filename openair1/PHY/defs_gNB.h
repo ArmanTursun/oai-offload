@@ -746,6 +746,11 @@ typedef struct PHY_VARS_gNB_s {
   void* wrapper_gnb;
   int instance_id_gnb;
   
+  double fpga_extra_energy;
+  double energy_unit;
+  uint64_t pkg_energy_start;
+  uint64_t pkg_energy_end;
+  
 } PHY_VARS_gNB;
 
 typedef struct puschSymbolProc_s {

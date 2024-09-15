@@ -659,22 +659,26 @@ static void _nr_rx_sdu(const module_id_t gnb_mod_idP,
 #endif
 
     //printf("[E2 Agent MAC_SDU]: TBS = %u, frame = %u, slot = %u, rnti = %d \n", sdu_lenP << 3, frameP, slotP, rntiP);
-    NR_mac_stats_t *ulsch_mac_stats = &UE->mac_stats;
-    NR_mac_ulsch_stats_t *ulsch_stats = &ulsch_mac_stats->ulsch_stats;
-    int rc_tbs = pthread_mutex_lock(&ulsch_stats->mutex);
-    DevAssert(rc_tbs == 0);
-    ulsch_tbs_stats_t *ulsch_tbs = &ulsch_stats->tbs_list[ulsch_stats->number_of_tbs];
-    ulsch_tbs->tbs = sdu_lenP << 3;
-    ulsch_tbs->frame = frameP;
-    ulsch_tbs->slot = slotP;
-    ulsch_tbs->crc_check = crcP;
-    ulsch_tbs->latency = pusch_latency;
-    ulsch_stats->number_of_tbs++;
-    if (ulsch_stats->number_of_tbs == 10){
-      ulsch_stats->number_of_tbs = 0;   // dummy method to prevent from fulling
-    }
-    rc_tbs = pthread_mutex_unlock(&ulsch_stats->mutex);
-    DevAssert(rc_tbs == 0);
+    //NR_mac_stats_t *ulsch_mac_stats = &UE->mac_stats;
+    //NR_mac_ulsch_stats_t *ulsch_stats = &ulsch_mac_stats->ulsch_stats;
+    //int rc_tbs = pthread_mutex_lock(&ulsch_stats->mutex);
+    //DevAssert(rc_tbs == 0);
+    //ulsch_tbs_stats_t *ulsch_tbs = &ulsch_stats->tbs_list[ulsch_stats->number_of_tbs];
+    //ulsch_tbs_stats_t *ulsch_tbs = &ulsch_stats->tbs_list[0];
+    //ulsch_tbs->tbs = sdu_lenP << 3;
+    //ulsch_tbs->frame = frameP;
+    //ulsch_tbs->slot = slotP;
+    //ulsch_tbs->crc_check = crcP;
+    
+    //ulsch_stats->number_of_tbs++;
+    //ulsch_tbs->latency += pusch_latency;  
+    //if (ulsch_stats->number_of_tbs == 20){
+      //ulsch_stats->number_of_tbs = 0;   // dummy method to prevent from fulling
+      //ulsch_tbs->latency = 0;
+    //}  
+    
+    //rc_tbs = pthread_mutex_unlock(&ulsch_stats->mutex);
+    //DevAssert(rc_tbs == 0);
 
     if (sduP != NULL){
       LOG_D(NR_MAC, "Received PDU at MAC gNB \n");

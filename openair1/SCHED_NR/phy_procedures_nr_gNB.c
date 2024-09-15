@@ -308,6 +308,52 @@ void phy_procedures_gNB_TX(processingData_L1tx_t *msgTx,
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_PROCEDURES_gNB_TX + gNB->CC_id, 0);
 }
 
+#define MSR_RAPL_POWER_UNIT        0x606
+#define MSR_PKG_ENERGY_STATUS      0x611
+#define MSR_PP0_ENERGY_STATUS      0x639
+#define MSR_DRAM_ENERGY_STATUS     0x619
+
+//static uint64_t read_msr(int fd, uint32_t reg) {
+//    uint64_t data;
+//    if (pread(fd, &data, sizeof(data), reg) != sizeof(data)) {
+//        perror("pread");
+//        exit(1);
+//    }
+//    return data;
+//}
+
+float estimate_latency(uint8_t mcs, int x){
+    if (mcs >= 9 && mcs < 23) {
+        return 8.09858173 + 0.00117041 * (float)x;
+    } else if (mcs < 28){
+        return 0.88685096 + 0.00118006 * (float)x;
+    } else {
+        return 0.79120192 + 0.00071412 * (float)x;
+    }
+}
+float cal_latency(uint8_t mcs, unsigned int tbs){
+    int Kcb = 8448;
+    int Bprime = 0;
+    int L = 0;
+    int C = 0;
+    if (tbs<=Kcb){
+        L = 0;
+        C = 1;
+        Bprime = tbs;
+    }
+    else{
+        L = 24;
+        C = tbs/(Kcb-L);
+        if ((Kcb-L)*C < tbs){
+            C = C+1;
+        }
+        Bprime = tbs+(C*L);
+    }
+    int k = Bprime/C;
+    return k > 0 ? estimate_latency(mcs, k) : 0;
+}
+
+
 static void nr_postDecode(PHY_VARS_gNB *gNB, notifiedFIFO_elt_t *req)
 {
   ldpcDecode_t *rdata = (ldpcDecode_t*) NotifiedFifoData(req);
@@ -340,10 +386,10 @@ static void nr_postDecode(PHY_VARS_gNB *gNB, notifiedFIFO_elt_t *req)
       crc_valid = check_crc(ulsch_harq->b, lenWithCrc(1, rdata->A), crcType(1, rdata->A));
     }
     
-    pusch_pdu->out = rdtsc_oai();
+    //pusch_pdu->out = rdtsc_oai();
     //double latency = (double)(pusch_pdu->out - pusch_pdu->in) / (get_cpu_freq_GHz() * 1000.0);
     //memcpy(&pdu->pusch_latency, &latency, sizeof(double));
-    pusch_pdu->pusch_latency = (double)(pusch_pdu->out - pusch_pdu->in) / (get_cpu_freq_GHz() * 1000.0);
+    //pusch_pdu->pusch_latency = (double)(pusch_pdu->out - pusch_pdu->in) / (get_cpu_freq_GHz() * 1000.0);
 
     if (crc_valid && !check_abort(&ulsch_harq->abort_decode) && !gNB->pusch_vars[rdata->ulsch_id].DTX) {
       LOG_D(NR_PHY,
@@ -865,8 +911,25 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
       }
     }
   }
+  
+  //int fd;
+  //char msr_file[32];
+  //sprintf(msr_file, "/dev/cpu/0/msr");
+  //fd = open(msr_file, O_RDONLY);
+  //if (fd < 0) {
+  //  perror("open");
+  //  exit(1);
+  //}
 
+  // Read the RAPL energy unit
+  //uint64_t power_units = read_msr(fd, MSR_RAPL_POWER_UNIT);
+  //double energy_unit = 1.0 / (1 << (power_units & 0x0F));
+    
+  // Read initial energy values
+  //uint64_t pkg_energy_start = read_msr(fd, MSR_PKG_ENERGY_STATUS);
+  double total_energy = 0.0;    
   int totalDecode = 0;
+  
   for (int ULSCH_id = 0; ULSCH_id < gNB->max_nb_pusch; ULSCH_id++) {
     NR_gNB_ULSCH_t *ulsch = &gNB->ulsch[ULSCH_id];
     NR_UL_gNB_HARQ_t *ulsch_harq = ulsch->harq_process;
@@ -969,24 +1032,47 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
       
       float features[2];
       float results[4][3];
-      struct timespec start_time_qrf, end_time_qrf, start_time_topsis, end_time_topsis;
-      double latency_qrf, latency_topsis;
+      //struct timespec start_time_qrf, end_time_qrf, start_time_topsis, end_time_topsis;
+      //double latency_qrf, latency_topsis;
       
       features[0] = (float)(pdu->pusch_data.tb_size << 3);
       features[1] = (float)pdu->mcs_index;
       
-      clock_gettime(CLOCK_REALTIME, &start_time_qrf);
+      //clock_gettime(CLOCK_REALTIME, &start_time_qrf);
       predict_forest(features, results);
-      clock_gettime(CLOCK_REALTIME, &end_time_qrf);
-      latency_qrf = end_time_qrf.tv_nsec / 1000.0 - start_time_qrf.tv_nsec / 1000.0;
+      //clock_gettime(CLOCK_REALTIME, &end_time_qrf);
+      //latency_qrf = end_time_qrf.tv_nsec / 1000.0 - start_time_qrf.tv_nsec / 1000.0;
       
       gNB->ulsch[ULSCH_id].ldpc_offload = false;
-      clock_gettime(CLOCK_REALTIME, &start_time_topsis);
+      //clock_gettime(CLOCK_REALTIME, &start_time_topsis);
+      if (gNB->ldpc_offload == 0){
+      	gNB->ulsch[ULSCH_id].ldpc_offload = false;
+	//gNB->ldpc_offload = 0.5;
+      }else{
       gNB->ulsch[ULSCH_id].ldpc_offload = topsis(results[0][1], results[2][1], results[1][1], results[3][1], 1.0 - gNB->ldpc_offload, gNB->ldpc_offload) == 0 ? false : true;
-      clock_gettime(CLOCK_REALTIME, &end_time_topsis);
-      latency_topsis = end_time_topsis.tv_nsec / 1000.0 - start_time_topsis.tv_nsec / 1000.0; 
+      }
+      //printf("offload weight: %f, offload: %d\n", gNB->ldpc_offload, gNB->ulsch[ULSCH_id].ldpc_offload ? 1 : 0);
+      //clock_gettime(CLOCK_REALTIME, &end_time_topsis);
+      //latency_topsis = end_time_topsis.tv_nsec / 1000.0 - start_time_topsis.tv_nsec / 1000.0; 
 
-      pdu->in = rdtsc_oai();
+      //pdu->in = rdtsc_oai();
+      
+      //int fd;
+      //char msr_file[32];
+      //sprintf(msr_file, "/dev/cpu/0/msr");
+      //fd = open(msr_file, O_RDONLY);
+      //if (fd < 0) {
+      //  perror("open");
+      //  exit(1);
+      //}
+
+      // Read the RAPL energy unit
+      //uint64_t power_units = read_msr(fd, MSR_RAPL_POWER_UNIT);
+      //double energy_unit = 1.0 / (1 << (power_units & 0x0F));
+
+    
+      // Read initial energy values
+      //uint64_t pkg_energy_start = read_msr(fd, MSR_PKG_ENERGY_STATUS);
       
       int const tasks_added = nr_ulsch_procedures(gNB, frame_rx, slot_rx, ULSCH_id, ulsch->harq_pid);
       if (tasks_added > 0)
@@ -994,7 +1080,7 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
 
       VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_NR_ULSCH_PROCEDURES_RX, 0);
       
-      //nfapi_nr_pusch_pdu_t *pusch_pdu = &gNB->ulsch[ULSCH_id].harq_process->ulsch_pdu;
+      nfapi_nr_pusch_pdu_t *pusch_pdu = &gNB->ulsch[ULSCH_id].harq_process->ulsch_pdu;
       //int bg = pusch_pdu->maintenance_parms_v3.ldpcBaseGraph;
       //int decode_num = 0;
       while (totalDecode > 0) {
@@ -1011,6 +1097,27 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
           delNotifiedFIFO_elt(req);
           totalDecode--;
       }
+      
+      // Read final energy values
+      //uint64_t pkg_energy_end = read_msr(fd, MSR_PKG_ENERGY_STATUS);
+
+      //close(fd);
+
+      // Calculate energy consumption
+      //double pkg_energy_consumed = (pkg_energy_end - pkg_energy_start) * energy_unit;
+      //pusch_pdu->pusch_latency = (pkg_energy_end - pkg_energy_start) * energy_unit;
+      //if (gNB->ulsch[ULSCH_id].ldpc_offload){
+      	//pusch_pdu->pusch_latency += cal_latency(pdu->mcs_index, pdu->pusch_data.tb_size << 3) * 1.2;      	
+      //}
+      //total_energy = (pkg_energy_end - pkg_energy_start) * energy_unit;
+      if (gNB->ulsch[ULSCH_id].ldpc_offload){
+      	total_energy += cal_latency(pdu->mcs_index, pdu->pusch_data.tb_size << 3) * 1.2;      	
+      }
+      //gNB_MAC_INST *gNB_mac = RC.nrmac[0];
+      //NR_UE_info_t *UE = find_nr_UE(&gNB_mac->UE_info, ulsch->rnti);
+      
+      //printf("tbs: %u, energy: %f\n", pdu->pusch_data.tb_size << 3, pusch_pdu->pusch_latency);
+      //pusch_pdu->pusch_latency = (double)(pusch_pdu->out - pusch_pdu->in) / (get_cpu_freq_GHz() * 1000.0);
       /*
       FILE *file = fopen("/home/nakaolab/openairinterface5g/test_data/ulsch/pwr/fpga_phytest/random_phytest_fpga.csv", "a");
       if (file == NULL) {
@@ -1023,6 +1130,13 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
       */
     }
   }
+    
+  // Read final energy values
+  //uint64_t pkg_energy_end = read_msr(fd, MSR_PKG_ENERGY_STATUS);
+  //close(fd);
+  gNB->fpga_extra_energy += total_energy;
+  //printf("energy: %f\n", (pkg_energy_end - pkg_energy_start) * energy_unit);
+  
   /*
     while (totalDecode > 0) {
       notifiedFIFO_elt_t *req = pullTpool(&gNB->respDecode, &gNB->threadPool);

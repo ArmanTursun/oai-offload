@@ -29,6 +29,19 @@
 static
 const int mod_id = 0;
 
+#define MSR_RAPL_POWER_UNIT        0x606
+#define MSR_PKG_ENERGY_STATUS      0x611
+#define MSR_PP0_ENERGY_STATUS      0x639
+#define MSR_DRAM_ENERGY_STATUS     0x619
+
+static uint64_t read_msr(int fd, uint32_t reg) {
+    uint64_t data;
+    if (pread(fd, &data, sizeof(data), reg) != sizeof(data)) {
+        perror("pread");
+        exit(1);
+    }
+    return data;
+}
 
 bool read_mac_sm(void* data)
 {
@@ -38,7 +51,23 @@ bool read_mac_sm(void* data)
   //fill_mac_ind_data(mac);
 
   mac->msg.tstamp = time_now_us();
-
+  PHY_VARS_gNB *gNB;
+  gNB = RC.gNB[0];
+  
+  int fd;
+  char msr_file[32];
+  sprintf(msr_file, "/dev/cpu/0/msr");
+  fd = open(msr_file, O_RDONLY);
+  if (fd < 0) {
+    perror("open");
+    exit(1);
+  }  
+  gNB->pkg_energy_end = read_msr(fd, MSR_PKG_ENERGY_STATUS);
+  close(fd);
+  
+  float energy = (gNB->pkg_energy_end - gNB->pkg_energy_start) * gNB->energy_unit;
+  gNB->pkg_energy_start = gNB->pkg_energy_end;
+  
   NR_UEs_t *UE_info = &RC.nrmac[mod_id]->UE_info;
   size_t num_ues = 0;
   UE_iterator(UE_info->list, ue) {
@@ -57,44 +86,62 @@ bool read_mac_sm(void* data)
     const NR_UE_sched_ctrl_t* sched_ctrl = &UE->UE_sched_ctrl;
     mac_ue_stats_impl_t* rd = &mac->msg.ue_stats[i];
 
-    NR_mac_ulsch_stats_t *ulsch_stats = &UE->mac_stats.ulsch_stats;
-    int rc_tbs = pthread_mutex_lock(&ulsch_stats->mutex);
-    DevAssert(rc_tbs == 0);
+    //NR_mac_ulsch_stats_t *ulsch_stats = &UE->mac_stats.ulsch_stats;
+    //int rc_tbs = pthread_mutex_lock(&ulsch_stats->mutex);
+    //DevAssert(rc_tbs == 0);
 
-    if(ulsch_stats->number_of_tbs > 0){
-    	rd->tbs = calloc(ulsch_stats->number_of_tbs, sizeof(tbs_stats_t));
-    	assert(rd->tbs!= NULL && "Memory exhausted" );
-    }
+    //if(ulsch_stats->number_of_tbs > 0){
+    	//rd->tbs = calloc(ulsch_stats->number_of_tbs, sizeof(mac_tbs_stats_t));
+    	//assert(rd->tbs!= NULL && "Memory exhausted" );
+    //}
     
     rd->rnti = UE->rnti;
     
-    rd->context.pusch_snr = (float) sched_ctrl->pusch_snrx10 / 10; //: float = -64;
-    rd->context.pucch_snr = (float) sched_ctrl->pusch_snrx10 / 10; //: float = -64;
-    rd->context.dl_bler = sched_ctrl->dl_bler_stats.bler;
-    rd->context.ul_bler = sched_ctrl->ul_bler_stats.bler;
-    const uint32_t bufferSize = sched_ctrl->estimated_ul_buffer - sched_ctrl->sched_ul_bytes;
-    rd->context.bsr = bufferSize;
-    rd->context.wb_cqi = sched_ctrl->CSI_report.cri_ri_li_pmi_cqi_report.wb_cqi_1tb;
-    rd->context.dl_mcs1 = sched_ctrl->dl_bler_stats.mcs;
-    rd->context.ul_mcs1 = sched_ctrl->ul_bler_stats.mcs;
-    rd->context.dl_mcs2 = 0;
-    rd->context.ul_mcs2 = 0;
-    rd->context.phr = sched_ctrl->ph;
+    //rd->context.pusch_snr = (float) sched_ctrl->pusch_snrx10 / 10; //: float = -64;
+    //rd->context.pucch_snr = (float) sched_ctrl->pusch_snrx10 / 10; //: float = -64;
+    rd->dl_bler = (float)gNB->fpga_extra_energy + energy;    
+    rd->ul_bler = sched_ctrl->ul_bler_stats.bler;
+    //printf("[E2 Agent Report]: fpga_energy = %f, energy = %f, bler: %f\n", (float)gNB->fpga_extra_energy, energy, sched_ctrl->ul_bler_stats.bler);
+    gNB->fpga_extra_energy = 0.0;
+    //const uint32_t bufferSize = sched_ctrl->estimated_ul_buffer - sched_ctrl->sched_ul_bytes;
+    //rd->context.bsr = bufferSize;
+    //rd->context.wb_cqi = sched_ctrl->CSI_report.cri_ri_li_pmi_cqi_report.wb_cqi_1tb;
+    //rd->context.dl_mcs1 = sched_ctrl->dl_bler_stats.mcs;
+    //rd->context.ul_mcs1 = sched_ctrl->ul_bler_stats.mcs;
+    //rd->context.dl_mcs2 = 0;
+    //rd->context.ul_mcs2 = 0;
+    //rd->context.phr = sched_ctrl->ph;
     
     // TODO add tbs to each UE
+    //NR_mac_ulsch_stats_t *ulsch_stats = &UE->mac_stats.ulsch_stats;
+    //rd->num_tbs = 0;
+    //rd->tbs = calloc(1, sizeof(mac_tbs_stats_t));
+    //assert(rd->tbs!= NULL && "Memory exhausted" );
+    //rd->tbs[0].latency = gNB->fpga_extra_energy;
+    //ulsch_stats->number_of_tbs = 0;   // dummy method to prevent from fulling
+    //ulsch_stats->tbs_list[0].latency = 0;
+    //int rc_tbs = pthread_mutex_lock(&ulsch_stats->mutex);
+    //DevAssert(rc_tbs == 0);
+/*
+    if(ulsch_stats->number_of_tbs > 0){
+    	rd->tbs = calloc(ulsch_stats->number_of_tbs, sizeof(mac_tbs_stats_t));
+    	assert(rd->tbs!= NULL && "Memory exhausted" );
+    }
+    
     rd->num_tbs = ulsch_stats->number_of_tbs;
     for (int tbs_id = 0; tbs_id < ulsch_stats->number_of_tbs; tbs_id++){
       ulsch_tbs_stats_t *ulsch_tbs = &ulsch_stats->tbs_list[tbs_id];
-      d->tbs[tbs_id] = ulsch_tbs->tbs;
-      rd->tbs_frame[tbs_id] = ulsch_tbs->frame;
-      rd->tbs_slot[tbs_id] = ulsch_tbs->slot;
-      rd->tbs_latency[tbs_id] = ulsch_tbs->latency;
-      rd->tbs_crc[tbs_id] = ulsch_tbs->crc_check;
+      rd->tbs[tbs_id].tbs = ulsch_tbs->tbs;
+      rd->tbs[tbs_id].frame = ulsch_tbs->frame;
+      rd->tbs[tbs_id].slot = ulsch_tbs->slot;
+      rd->tbs[tbs_id].latency = ulsch_tbs->latency;
+      rd->tbs[tbs_id].crc = ulsch_tbs->crc_check;
     }
 
     ulsch_stats->number_of_tbs = 0;
-    rc_tbs = pthread_mutex_unlock(&ulsch_stats->mutex);
-    DevAssert(rc_tbs == 0);
+*/
+    //rc_tbs = pthread_mutex_unlock(&ulsch_stats->mutex);
+    //DevAssert(rc_tbs == 0);
     
     //rd->tbs = calloc(NUM_UES, sizeof(mac_tbs_stats_t));
     //assert(rd->tbs != NULL && "memory exhausted");
@@ -133,13 +180,14 @@ sm_ag_if_ans_t write_ctrl_mac_sm(void const* data)
   gNB = RC.gNB[0];
   
   // TODO copy offload indication to each UE
-  for (uint32_t i = 0; i < msg->num_ues; i++){
-  	mac_ue_ctrl_t* ue = msg->ues[i];
+  //for (uint32_t i = 0; i < msg->num_ues; i++){
+  	//mac_ue_ctrl_t* ue = &msg->ues[i];
   	//ue->offload = 1;
-    gNB->ldpc_offload = ue->offload;
-  }
-  	
-  //printf("[E2 Agent Control]: ldpc_offload = %d, Timestamp = %" PRId64 "\n", msg->offload, msg->tms);
+    //gNB->ldpc_offload = ue->offload;
+    //printf("[E2 Agent Control]: ldpc_offload = %f, Timestamp = %" PRId64 "\n", ue->offload, msg->tms);
+  //}
+  gNB->ldpc_offload = msg->offload;
+  //printf("offload: %f, msg_offload: %f \n", gNB->ldpc_offload, msg->offload);
   sm_ag_if_ans_t ans = {.type = CTRL_OUTCOME_SM_AG_IF_ANS_V0};
   ans.ctrl_out.type = MAC_AGENT_IF_CTRL_ANS_V0;
   return ans;
