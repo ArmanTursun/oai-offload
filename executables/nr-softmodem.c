@@ -668,8 +668,8 @@ int main( int argc, char **argv ) {
   // create gnb rfnoc instance
   void* wrapper_gnb;
   int instance_id_gnb = 0;
-  wrapper_gnb = create_rfnoc_wrapper();
-  instance_id_gnb = create_ldpc_instance(wrapper_gnb, false, 1);
+  //wrapper_gnb = create_rfnoc_wrapper();
+  //instance_id_gnb = create_ldpc_instance(wrapper_gnb, false, 1);
 
   EPC_MODE_ENABLED = !IS_SOFTMODEM_NOS1;
 
@@ -862,8 +862,8 @@ int main( int argc, char **argv ) {
   //printf("Energy consumed by the core (PP0): %.10f Joules, %" PRId64 " \n", energy_consumed_pp0, end_energy_pp0 - start_energy_pp0);
   //printf("Energy consumed by the core (PP0): %.10f Joules, %" PRId64 " \n", energy_consumed_pp0, end_energy_pp0 - start_energy_pp0);;
 
-  release_ldpc_instance(wrapper_gnb, instance_id_gnb);
-  delete_rfnoc_wrapper(wrapper_gnb);
+  //release_ldpc_instance(wrapper_gnb, instance_id_gnb);
+  //delete_rfnoc_wrapper(wrapper_gnb);
 
   // cleanup
   if (RC.nb_nr_L1_inst > 0)

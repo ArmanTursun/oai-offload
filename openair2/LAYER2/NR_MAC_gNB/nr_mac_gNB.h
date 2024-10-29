@@ -858,6 +858,8 @@ typedef struct gNB_MAC_INST_s {
   int16_t slot;
 
   pthread_mutex_t sched_lock;
+  
+  uint16_t max_prb;
 
 } gNB_MAC_INST;
 

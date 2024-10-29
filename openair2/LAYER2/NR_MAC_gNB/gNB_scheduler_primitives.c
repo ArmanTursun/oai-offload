@@ -625,7 +625,9 @@ bool nr_find_nb_rb(uint16_t Qm,
   while(transform_precoding == NR_PUSCH_Config__transformPrecoder_enabled &&
         !multiple_2_3_5(nb_rb_max))
     nb_rb_max--;
-
+  
+  //nb_rb_max = 50;
+  
   /* is the maximum (not even) enough? */
   *nb_rb = nb_rb_max;
   *tbs = nr_compute_tbs(Qm, R, *nb_rb, nb_symb_sch, nb_dmrs_prb, 0, 0, nrOfLayers) >> 3;

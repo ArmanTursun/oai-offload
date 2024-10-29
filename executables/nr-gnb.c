@@ -508,14 +508,14 @@ void init_eNB_afterRU(void) {
 #define MSR_PP0_ENERGY_STATUS      0x639
 #define MSR_DRAM_ENERGY_STATUS     0x619
 
-static uint64_t read_msr(int fd, uint32_t reg) {
-    uint64_t data;
-    if (pread(fd, &data, sizeof(data), reg) != sizeof(data)) {
-        perror("pread");
-        exit(1);
-    }
-    return data;
-}
+//static uint64_t read_msr(int fd, uint32_t reg) {
+//    uint64_t data;
+//    if (pread(fd, &data, sizeof(data), reg) != sizeof(data)) {
+//        perror("pread");
+//        exit(1);
+//    }
+//    return data;
+//}
 
 //void init_gNB(int single_thread_flag,int wait_for_sync) {
 void init_gNB(int single_thread_flag,int wait_for_sync, void* wrapper_gnb, int instance_id_gnb) {
@@ -566,20 +566,20 @@ void init_gNB(int single_thread_flag,int wait_for_sync, void* wrapper_gnb, int i
     gNB->instance_id_gnb = instance_id_gnb;
     gNB->sc_idx = 12;
     
-    int fd;
-    char msr_file[32];
-    sprintf(msr_file, "/dev/cpu/0/msr");
-    fd = open(msr_file, O_RDONLY);
-    if (fd < 0) {
-      perror("open");
-      exit(1);
-    }
+    //int fd;
+    //char msr_file[32];
+    //sprintf(msr_file, "/dev/cpu/0/msr");
+    //fd = open(msr_file, O_RDONLY);
+    //if (fd < 0) {
+      //perror("open");
+      //exit(1);
+    //}
     
     // Read the RAPL energy unit
-    uint64_t power_units = read_msr(fd, MSR_RAPL_POWER_UNIT);
-    gNB->energy_unit = 1.0 / (1 << (power_units & 0x0F));
-    gNB->pkg_energy_start = read_msr(fd, MSR_PKG_ENERGY_STATUS);
-    close(fd);
+    //uint64_t power_units = read_msr(fd, MSR_RAPL_POWER_UNIT);
+    //gNB->energy_unit = 1.0 / (1 << (power_units & 0x0F));
+    //gNB->pkg_energy_start = read_msr(fd, MSR_PKG_ENERGY_STATUS);
+    //close(fd);
 
   }
   

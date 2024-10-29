@@ -747,6 +747,7 @@ typedef struct PHY_VARS_gNB_s {
   int instance_id_gnb;
   
   double fpga_extra_energy;
+  double ldpc_latency;
   double energy_unit;
   uint64_t pkg_energy_start;
   uint64_t pkg_energy_end;

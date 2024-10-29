@@ -246,7 +246,7 @@ bool nr_ul_preprocessor_phytest(module_id_t module_id, frame_t frame, sub_frame_
   uint16_t rbStart = 0;
   uint16_t rbSize;
 
-  const int bw = ul_bwp->BWPSize;
+  //const int bw = ul_bwp->BWPSize;
   const int BWPStart = ul_bwp->BWPStart;
 
   //if (target_ul_bw>bw)

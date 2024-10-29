@@ -538,7 +538,11 @@ static void nr_processULRFNoC_postDecode(void *arg)
   int de_iterations, term_no_change, term_on_pass, parity_pass;
   getDecoderStatus2(status_de_ptr[1], &de_iterations, &term_no_change, &term_on_pass, &parity_pass, &rdata->current_seg);
   //printf("De_iterations %d, term_no_change %d, term_on_pass %d, parity_pass %d, r %d \n", de_iterations, term_no_change, term_on_pass, parity_pass, rdata->current_seg);
-  rdata->decodeIterations = de_iterations;
+  if (parity_pass > 0){
+  	rdata->decodeIterations = de_iterations;
+  } else {
+  	rdata->decodeIterations = p_decoderParms->numMaxIter + 1;
+  }
   int r_offset = rdata->E * rdata->current_seg;
   int offset = (Kr_bytes - (ulsch_harq->F >> 3) - ((ulsch_harq->C > 1) ? 3 : 0)) * rdata->current_seg;
   //printf("r_offset %d, offset %d, rdata_r_offset %d, rdata_offset %d\n", r_offset, offset, rdata->r_offset, rdata->offset);
@@ -790,9 +794,9 @@ int nr_ulsch_decoding(PHY_VARS_gNB *phy_vars_gNB,
 
 
   //if (rfnoc_offload){
-  //if (false){
+  if (false){
   //if (ulsch->ldpc_offload && rfnoc_offload){
-  if (ulsch->ldpc_offload){
+  //if (ulsch->ldpc_offload){
   	//printf("*** Using FPGA decoding, TBS: %d, rv_index: %d, max_iteration: %d\n", A, pusch_pdu->pusch_data.rv_index, decParams.numMaxIter);
   
   	notifiedFIFO_t nf_rfnoc;
