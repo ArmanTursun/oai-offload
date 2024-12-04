@@ -1972,6 +1972,13 @@ static void pf_ul(module_id_t module_id,
                   &TBS,
                   &rbSize);
 
+    //FILE *file = fopen("/home/nakaolab/B_TBS_SNR.csv", "a");
+    //fprintf(file, "%d,%d,%d,%d,%d,%d\n", rbSize, max_rbSize, TBS, sched_ctrl->estimated_ul_buffer, sched_ctrl->sched_ul_bytes, B);
+    //fclose(file);
+    
+    //printf("rbSize %d (max_rbSize %d), TBS %d, est buf %d, sched_ul %d, B %d\n",
+          //rbSize, max_rbSize, TBS, sched_ctrl->estimated_ul_buffer, sched_ctrl->sched_ul_bytes, B);
+    
     sched_pusch->rbSize = rbSize;
     sched_pusch->tb_size = TBS;
     LOG_D(NR_MAC,"rbSize %d (max_rbSize %d), TBS %d, est buf %d, sched_ul %d, B %d, CCE %d, num_dmrs_symb %d, N_PRB_DMRS %d\n",

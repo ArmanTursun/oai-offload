@@ -106,9 +106,9 @@ bool read_mac_sm(void* data)
     gNB->ldpc_latency = 0.0;
     //printf("[E2 Agent Report]: fpga_energy = %f, energy = %f, bler: %f\n", (float)gNB->fpga_extra_energy, energy, sched_ctrl->ul_bler_stats.bler);
     //gNB->fpga_extra_energy = 0.0;
-    //const uint32_t bufferSize = sched_ctrl->estimated_ul_buffer - sched_ctrl->sched_ul_bytes;
-    //rd->context.bsr = bufferSize;
-    //rd->context.wb_cqi = sched_ctrl->CSI_report.cri_ri_li_pmi_cqi_report.wb_cqi_1tb;
+    const uint32_t bufferSize = sched_ctrl->estimated_ul_buffer - sched_ctrl->sched_ul_bytes;
+    rd->context.bsr = bufferSize;
+    rd->context.wb_cqi = sched_ctrl->CSI_report.cri_ri_li_pmi_cqi_report.wb_cqi_1tb;
     //rd->context.dl_mcs1 = sched_ctrl->dl_bler_stats.mcs;
     //rd->context.ul_mcs1 = sched_ctrl->ul_bler_stats.mcs;
     //rd->context.dl_mcs2 = 0;
@@ -179,23 +179,19 @@ sm_ag_if_ans_t write_ctrl_mac_sm(void const* data)
   //assert(0 !=0 && "Not supported");
   mac_ctrl_req_data_t const* mac_req_ctrl = (mac_ctrl_req_data_t const* )data;
   mac_ctrl_msg_t const* msg = &mac_req_ctrl->msg;
-  PHY_VARS_gNB *gNB;
-  gNB = RC.gNB[0];
+  //PHY_VARS_gNB *gNB;
+  //gNB = RC.gNB[0];
   NR_bler_options_t *ul_bler_options = &RC.nrmac[mod_id]->ul_bler;
-  ul_bler_options->max_mcs = msg->mcs;
-  RC.nrmac[mod_id]->max_prb = msg->prb;
+  ul_bler_options->max_mcs = msg->ran_conf[0].pusch_mcs;
+  RC.nrmac[mod_id]->max_prb = msg->ran_conf[0].pusch_prb;
   
   //for (size_t i = 0; i < msg->ran_conf_len; i++) {
-  	//gNB->ldpc_offload = msg->ran_conf[i].pusch_mcs;
-  //}	
-  // TODO copy offload indication to each UE
-  //for (uint32_t i = 0; i < msg->num_ues; i++){
-  	//mac_ue_ctrl_t* ue = &msg->ues[i];
-  	//ue->offload = 1;
-    //gNB->ldpc_offload = ue->offload;
-    //printf("[E2 Agent Control]: ldpc_offload = %f, Timestamp = %" PRId64 "\n", ue->offload, msg->tms);
+  // TODO
+  //  printf("[E2-Agent]: ran_conf[%ld].isset_pusch_mcs %d\n", i, msg->ran_conf[i].isset_pusch_mcs);
+  //  printf("[E2-Agent]: ran_conf[%ld].pusch_mcs %d\n", i, msg->ran_conf[i].pusch_mcs);
+  //  printf("[E2-Agent]: ran_conf[%ld].rnti %d\n", i, msg->ran_conf[i].rnti);
   //}
-  //gNB->ldpc_offload = msg->offload;
+  
   printf("mcs: %u, prb: %u \n", ul_bler_options->max_mcs, RC.nrmac[mod_id]->max_prb);
   sm_ag_if_ans_t ans = {.type = CTRL_OUTCOME_SM_AG_IF_ANS_V0};
   ans.ctrl_out.type = MAC_AGENT_IF_CTRL_ANS_V0;
