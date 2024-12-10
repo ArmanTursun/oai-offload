@@ -34,14 +34,6 @@ const int mod_id = 0;
 #define MSR_PP0_ENERGY_STATUS      0x639
 #define MSR_DRAM_ENERGY_STATUS     0x619
 
-//static uint64_t read_msr(int fd, uint32_t reg) {
-//    uint64_t data;
-//    if (pread(fd, &data, sizeof(data), reg) != sizeof(data)) {
-//        perror("pread");
-//        exit(1);
-//    }
-//    return data;
-//}
 
 bool read_mac_sm(void* data)
 {
@@ -54,19 +46,6 @@ bool read_mac_sm(void* data)
   PHY_VARS_gNB *gNB;
   gNB = RC.gNB[0];
   
-  //int fd;
-  //char msr_file[32];
-  //sprintf(msr_file, "/dev/cpu/0/msr");
-  //fd = open(msr_file, O_RDONLY);
-  //if (fd < 0) {
-    //perror("open");
-    //exit(1);
-  //}  
-  //gNB->pkg_energy_end = read_msr(fd, MSR_PKG_ENERGY_STATUS);
-  //close(fd);
-  
-  //float energy = (gNB->pkg_energy_end - gNB->pkg_energy_start) * gNB->energy_unit;
-  //gNB->pkg_energy_start = gNB->pkg_energy_end;
   
   NR_UEs_t *UE_info = &RC.nrmac[mod_id]->UE_info;
   size_t num_ues = 0;
@@ -83,85 +62,42 @@ bool read_mac_sm(void* data)
 
   size_t i = 0; //TODO
   UE_iterator(UE_info->list, UE) {
-    //const NR_UE_sched_ctrl_t* sched_ctrl = &UE->UE_sched_ctrl;
+    const NR_UE_sched_ctrl_t* sched_ctrl = &UE->UE_sched_ctrl;
     mac_ue_stats_impl_t* rd = &mac->msg.ue_stats[i];
-
-    //NR_mac_ulsch_stats_t *ulsch_stats = &UE->mac_stats.ulsch_stats;
-    //int rc_tbs = pthread_mutex_lock(&ulsch_stats->mutex);
-    //DevAssert(rc_tbs == 0);
-
-    //if(ulsch_stats->number_of_tbs > 0){
-    	//rd->tbs = calloc(ulsch_stats->number_of_tbs, sizeof(mac_tbs_stats_t));
-    	//assert(rd->tbs!= NULL && "Memory exhausted" );
-    //}
     
     rd->rnti = UE->rnti;
-    
-    //rd->context.pusch_snr = (float) sched_ctrl->pusch_snrx10 / 10; //: float = -64;
-    //rd->context.pucch_snr = (float) sched_ctrl->pusch_snrx10 / 10; //: float = -64;
-    rd->dl_bler = (float)gNB->fpga_extra_energy;// + energy;    
-    //rd->ul_bler = sched_ctrl->ul_bler_stats.bler;
-    rd->ul_bler = (float)gNB->ldpc_latency;
-    gNB->fpga_extra_energy = 0.0;
-    gNB->ldpc_latency = 0.0;
-    //printf("[E2 Agent Report]: fpga_energy = %f, energy = %f, bler: %f\n", (float)gNB->fpga_extra_energy, energy, sched_ctrl->ul_bler_stats.bler);
-    //gNB->fpga_extra_energy = 0.0;
-    const uint32_t bufferSize = sched_ctrl->estimated_ul_buffer - sched_ctrl->sched_ul_bytes;
-    rd->context.bsr = bufferSize;
-    rd->context.wb_cqi = sched_ctrl->CSI_report.cri_ri_li_pmi_cqi_report.wb_cqi_1tb;
-    //rd->context.dl_mcs1 = sched_ctrl->dl_bler_stats.mcs;
-    //rd->context.ul_mcs1 = sched_ctrl->ul_bler_stats.mcs;
-    //rd->context.dl_mcs2 = 0;
-    //rd->context.ul_mcs2 = 0;
-    //rd->context.phr = sched_ctrl->ph;
-    
-    // TODO add tbs to each UE
-    //NR_mac_ulsch_stats_t *ulsch_stats = &UE->mac_stats.ulsch_stats;
-    //rd->num_tbs = 0;
-    //rd->tbs = calloc(1, sizeof(mac_tbs_stats_t));
-    //assert(rd->tbs!= NULL && "Memory exhausted" );
-    //rd->tbs[0].latency = gNB->fpga_extra_energy;
-    //ulsch_stats->number_of_tbs = 0;   // dummy method to prevent from fulling
-    //ulsch_stats->tbs_list[0].latency = 0;
-    //int rc_tbs = pthread_mutex_lock(&ulsch_stats->mutex);
-    //DevAssert(rc_tbs == 0);
-/*
-    if(ulsch_stats->number_of_tbs > 0){
-    	rd->tbs = calloc(ulsch_stats->number_of_tbs, sizeof(mac_tbs_stats_t));
-    	assert(rd->tbs!= NULL && "Memory exhausted" );
-    }
-    
-    rd->num_tbs = ulsch_stats->number_of_tbs;
-    for (int tbs_id = 0; tbs_id < ulsch_stats->number_of_tbs; tbs_id++){
-      ulsch_tbs_stats_t *ulsch_tbs = &ulsch_stats->tbs_list[tbs_id];
-      rd->tbs[tbs_id].tbs = ulsch_tbs->tbs;
-      rd->tbs[tbs_id].frame = ulsch_tbs->frame;
-      rd->tbs[tbs_id].slot = ulsch_tbs->slot;
-      rd->tbs[tbs_id].latency = ulsch_tbs->latency;
-      rd->tbs[tbs_id].crc = ulsch_tbs->crc_check;
-    }
+    rd->frame = RC.nrmac[mod_id]->frame;
+    rd->slot = RC.nrmac[mod_id]->slot;
 
-    ulsch_stats->number_of_tbs = 0;
-*/
-    //rc_tbs = pthread_mutex_unlock(&ulsch_stats->mutex);
-    //DevAssert(rc_tbs == 0);
+    rd->pwr = (float)gNB->fpga_extra_energy;// + energy;    
     
-    //rd->tbs = calloc(NUM_UES, sizeof(mac_tbs_stats_t));
-    //assert(rd->tbs != NULL && "memory exhausted");
+    //gNB->fpga_extra_energy = 0.0;
+       
+    if (is_xlsch_in_slot(RC.nrmac[mod_id]->dlsch_slot_bitmap[rd->slot / 64], rd->slot)) {
+      rd->dl_curr_tbs = UE->mac_stats.dl.current_bytes << 3;
+      rd->dl_sched_rb = UE->mac_stats.dl.current_rbs;
+    }
+    if (is_xlsch_in_slot(RC.nrmac[mod_id]->ulsch_slot_bitmap[rd->slot / 64], rd->slot)) {
+      rd->ul_curr_tbs = UE->mac_stats.ul.current_tbs << 3;
+      rd->ul_sched_rb = sched_ctrl->sched_pusch.rbSize;
+    }
     
-    //for (int j = 0; j < rd->num_tbs; j++)
-    //{
-    //  rd->tbs[j].tbs = abs(rand()%mod);
-    //  rd->tbs[j].frame = abs(rand()%mod);
-    //  rd->tbs[j].slot = abs(rand()%mod);
-    //  rd->tbs[j].latency = abs(rand()%mod);
-    //  rd->tbs[j].crc = abs(rand()%mod);
-    //}
+    rd->pusch_snr = (float) sched_ctrl->pusch_snrx10 / 10; //: float = -64;
+    rd->pucch_snr = (float) sched_ctrl->pucch_snrx10 / 10; //: float = -64;
+     
+    //const uint32_t bufferSize = sched_ctrl->estimated_ul_buffer - sched_ctrl->sched_ul_bytes;
+    //rd->bsr = bufferSize;
+    rd->bsr = UE->mac_stats.ul.current_demand;
     
+    rd->wb_cqi = sched_ctrl->CSI_report.cri_ri_li_pmi_cqi_report.wb_cqi_1tb;
+    rd->dl_mcs1 = sched_ctrl->dl_bler_stats.mcs;
+    rd->dl_bler = sched_ctrl->dl_bler_stats.bler;
+    rd->ul_mcs1 = sched_ctrl->ul_bler_stats.mcs;
+    rd->ul_bler = sched_ctrl->ul_bler_stats.bler;
+    rd->dl_mcs2 = 0;
+    rd->ul_mcs2 = 0;
 
     ++i;
-    //if (rd->ul_curr_tbs > 0)
-    //printf("[E2 Agent Report]: TBS = %" PRIu64 ", Timestamp = %" PRId64 "\n", rd->ul_curr_tbs, mac->msg.tstamp);
   }
 
   return num_ues > 0;
@@ -179,8 +115,6 @@ sm_ag_if_ans_t write_ctrl_mac_sm(void const* data)
   //assert(0 !=0 && "Not supported");
   mac_ctrl_req_data_t const* mac_req_ctrl = (mac_ctrl_req_data_t const* )data;
   mac_ctrl_msg_t const* msg = &mac_req_ctrl->msg;
-  //PHY_VARS_gNB *gNB;
-  //gNB = RC.gNB[0];
   NR_bler_options_t *ul_bler_options = &RC.nrmac[mod_id]->ul_bler;
   ul_bler_options->max_mcs = msg->ran_conf[0].pusch_mcs;
   RC.nrmac[mod_id]->max_prb = msg->ran_conf[0].pusch_prb;

@@ -1981,6 +1981,7 @@ static void pf_ul(module_id_t module_id,
     
     sched_pusch->rbSize = rbSize;
     sched_pusch->tb_size = TBS;
+    sched_pusch->ul_demand = B;
     LOG_D(NR_MAC,"rbSize %d (max_rbSize %d), TBS %d, est buf %d, sched_ul %d, B %d, CCE %d, num_dmrs_symb %d, N_PRB_DMRS %d\n",
           rbSize, max_rbSize,sched_pusch->tb_size, sched_ctrl->estimated_ul_buffer, sched_ctrl->sched_ul_bytes, B,
           sched_ctrl->cce_index,sched_pusch->dmrs_info.num_dmrs_symb,sched_pusch->dmrs_info.N_PRB_DMRS);
@@ -2239,6 +2240,8 @@ void nr_schedule_ulsch(module_id_t module_id, frame_t frame, sub_frame_t slot, n
       UE->mac_stats.ul.total_rbs_retx += sched_pusch->rbSize;
     }
     UE->mac_stats.ul.current_bytes = sched_pusch->tb_size;
+    UE->mac_stats.ul.current_tbs = sched_pusch->tb_size;
+    UE->mac_stats.ul.current_demand = sched_pusch->ul_demand;
     UE->mac_stats.ul.current_rbs = sched_pusch->rbSize;
     sched_ctrl->last_ul_frame = sched_pusch->frame;
     sched_ctrl->last_ul_slot = sched_pusch->slot;

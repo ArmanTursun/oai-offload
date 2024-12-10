@@ -374,6 +374,7 @@ typedef struct NR_sched_pusch {
   uint16_t R;
   uint8_t Qm;
   uint32_t tb_size;
+  uint32_t ul_demand;
 
   /// UL HARQ PID to use for this UE, or -1 for "any new"
   int8_t ul_harq_pid;
@@ -638,6 +639,8 @@ typedef struct NR_mac_dir_stats {
   uint32_t total_rbs_retx;
   uint32_t num_mac_sdu;
   uint32_t current_rbs;
+  uint32_t current_tbs;
+  uint32_t current_demand;
 } NR_mac_dir_stats_t;
 
 
