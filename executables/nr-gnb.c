@@ -518,7 +518,7 @@ void init_eNB_afterRU(void) {
 //}
 
 //void init_gNB(int single_thread_flag,int wait_for_sync) {
-void init_gNB(int single_thread_flag,int wait_for_sync, void* wrapper_gnb, int instance_id_gnb) {
+void init_gNB(int single_thread_flag,int wait_for_sync) {
 
   int inst;
   PHY_VARS_gNB *gNB;
@@ -562,8 +562,6 @@ void init_gNB(int single_thread_flag,int wait_for_sync, void* wrapper_gnb, int i
     gNB->prach_energy_counter = 0;
     gNB->chest_time = get_softmodem_params()->chest_time;
     gNB->chest_freq = get_softmodem_params()->chest_freq;
-    gNB->wrapper_gnb = wrapper_gnb;
-    gNB->instance_id_gnb = instance_id_gnb;
     gNB->sc_idx = 12;
     
     //int fd;

@@ -43,7 +43,6 @@
 #include "PHY/CODING/nrLDPC_decoder/nrLDPC_types.h"
 #include "executables/rt_profiling.h"
 #include "nfapi_nr_interface_scf.h"
-#include "/home/nakaolab/rfnoc_test.ldpc/include/ldpc_rfnoc_wrapper.h"
 
 #define MAX_NUM_RU_PER_gNB 8
 #define MAX_PUCCH0_NID 8
@@ -743,8 +742,6 @@ typedef struct PHY_VARS_gNB_s {
   void *scopeData;
   /// structure for analyzing high-level RT measurements
   rt_L1_profiling_t rt_L1_profiling; 
-  void* wrapper_gnb;
-  int instance_id_gnb;
   
   double fpga_extra_energy;
   double ldpc_latency;
