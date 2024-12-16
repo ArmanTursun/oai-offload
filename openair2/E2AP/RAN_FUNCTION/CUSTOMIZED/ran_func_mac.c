@@ -79,7 +79,7 @@ bool read_mac_sm(void* data)
     }
     if (is_xlsch_in_slot(RC.nrmac[mod_id]->ulsch_slot_bitmap[rd->slot / 64], rd->slot)) {
       rd->ul_curr_tbs = UE->mac_stats.ul.current_tbs << 3;
-      rd->ul_sched_rb = sched_ctrl->sched_pusch.rbSize;
+      rd->ul_sched_rb = UE->mac_stats.ul.current_rbs;
     }
     
     rd->pusch_snr = (float) sched_ctrl->pusch_snrx10 / 10; //: float = -64;
