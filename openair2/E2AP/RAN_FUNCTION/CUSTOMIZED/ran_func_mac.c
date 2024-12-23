@@ -116,8 +116,10 @@ sm_ag_if_ans_t write_ctrl_mac_sm(void const* data)
   mac_ctrl_req_data_t const* mac_req_ctrl = (mac_ctrl_req_data_t const* )data;
   mac_ctrl_msg_t const* msg = &mac_req_ctrl->msg;
   NR_bler_options_t *ul_bler_options = &RC.nrmac[mod_id]->ul_bler;
-  ul_bler_options->max_mcs = msg->ran_conf[0].pusch_mcs;
-  RC.nrmac[mod_id]->max_prb = msg->ran_conf[0].pusch_prb;
+  if (msg->ran_conf[0].isset_pusch_mcs){
+  	ul_bler_options->max_mcs = msg->ran_conf[0].pusch_mcs;
+  	RC.nrmac[mod_id]->max_prb = msg->ran_conf[0].pusch_prb;
+  }
   
   //for (size_t i = 0; i < msg->ran_conf_len; i++) {
   // TODO
@@ -126,7 +128,7 @@ sm_ag_if_ans_t write_ctrl_mac_sm(void const* data)
   //  printf("[E2-Agent]: ran_conf[%ld].rnti %d\n", i, msg->ran_conf[i].rnti);
   //}
   
-  printf("mcs: %u, prb: %u \n", ul_bler_options->max_mcs, RC.nrmac[mod_id]->max_prb);
+  //printf("mcs: %u, prb: %u \n", ul_bler_options->max_mcs, RC.nrmac[mod_id]->max_prb);
   sm_ag_if_ans_t ans = {.type = CTRL_OUTCOME_SM_AG_IF_ANS_V0};
   ans.ctrl_out.type = MAC_AGENT_IF_CTRL_ANS_V0;
   ans.ctrl_out.mac.ans = MAC_CTRL_OUT_OK;
