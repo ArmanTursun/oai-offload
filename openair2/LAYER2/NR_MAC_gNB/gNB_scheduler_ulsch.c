@@ -1925,6 +1925,7 @@ static void pf_ul(module_id_t module_id,
     int rbStart = 0;
     const uint16_t slbitmap = SL_to_bitmap(sched_pusch->tda_info.startSymbolIndex, sched_pusch->tda_info.nrOfSymbols);
     const uint16_t bwpSize = current_BWP->BWPSize;
+
     while (rbStart < bwpSize && (rballoc_mask[rbStart] & slbitmap) != slbitmap)
       rbStart++;
     sched_pusch->rbStart = rbStart;
@@ -1982,6 +1983,7 @@ static void pf_ul(module_id_t module_id,
     sched_pusch->rbSize = rbSize;
     sched_pusch->tb_size = TBS;
     sched_pusch->ul_demand = B;
+    
     LOG_D(NR_MAC,"rbSize %d (max_rbSize %d), TBS %d, est buf %d, sched_ul %d, B %d, CCE %d, num_dmrs_symb %d, N_PRB_DMRS %d\n",
           rbSize, max_rbSize,sched_pusch->tb_size, sched_ctrl->estimated_ul_buffer, sched_ctrl->sched_ul_bytes, B,
           sched_ctrl->cce_index,sched_pusch->dmrs_info.num_dmrs_symb,sched_pusch->dmrs_info.N_PRB_DMRS);
@@ -2239,10 +2241,16 @@ void nr_schedule_ulsch(module_id_t module_id, frame_t frame, sub_frame_t slot, n
             cur_harq->ndi);
       UE->mac_stats.ul.total_rbs_retx += sched_pusch->rbSize;
     }
-    UE->mac_stats.ul.current_bytes = sched_pusch->tb_size;
-    UE->mac_stats.ul.current_tbs = sched_pusch->tb_size;
-    UE->mac_stats.ul.current_demand = sched_pusch->ul_demand;
-    UE->mac_stats.ul.current_rbs = sched_pusch->rbSize;
+    if (sched_pusch->rbSize > 0 && sched_pusch->ul_demand > 0){
+    	UE->mac_stats.ul.current_bytes = sched_pusch->tb_size;
+    	UE->mac_stats.ul.current_tbs = sched_pusch->tb_size;
+    	UE->mac_stats.ul.current_demand = sched_pusch->ul_demand;
+    	UE->mac_stats.ul.current_rbs = sched_pusch->rbSize;
+    	const int max_mcs_table = (current_BWP->mcs_table == 0 || current_BWP->mcs_table == 2) ? 28 : 27;
+    	UE->mac_stats.ul.total_sched_blocks += 1;
+    	if (sched_pusch->tb_size < sched_pusch->ul_demand && (nr_mac->max_prb < current_BWP->BWPSize)) // || nr_mac->ul_bler.max_mcs < max_mcs_table
+    		UE->mac_stats.ul.poor_sched_blocks += 1;
+    }
     sched_ctrl->last_ul_frame = sched_pusch->frame;
     sched_ctrl->last_ul_slot = sched_pusch->slot;
 
