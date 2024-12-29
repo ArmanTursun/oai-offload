@@ -59,11 +59,18 @@ bool read_mac_sm(void* data)
     mac->msg.ue_stats = calloc(mac->msg.len_ue_stats, sizeof(mac_ue_stats_impl_t));
     assert(mac->msg.ue_stats != NULL && "Memory exhausted" );
   }
-
+  
+  
   size_t i = 0; //TODO
   UE_iterator(UE_info->list, UE) {
     const NR_UE_sched_ctrl_t* sched_ctrl = &UE->UE_sched_ctrl;
     mac_ue_stats_impl_t* rd = &mac->msg.ue_stats[i];
+    float poor_sched_rate = UE->mac_stats.ul.prate;
+    
+    NR_bler_options_t *ul_bler_options = &RC.nrmac[mod_id]->ul_bler;
+    
+    //NR_UE_UL_BWP_t *current_BWP = &UE->current_UL_BWP;
+    //const uint16_t bwpSize = current_BWP->BWPSize;
     
     rd->rnti = UE->rnti;
     rd->frame = RC.nrmac[mod_id]->frame;
@@ -95,8 +102,17 @@ bool read_mac_sm(void* data)
     rd->ul_mcs1 = sched_ctrl->ul_bler_stats.mcs;
     rd->ul_bler = sched_ctrl->ul_bler_stats.bler;
     rd->dl_mcs2 = 0;
-    rd->ul_mcs2 = 0;
-
+    rd->ul_mcs2 = ul_bler_options->max_mcs;
+        
+    if (UE->mac_stats.ul.total_sched_blocks > 0){
+    	poor_sched_rate = (float)UE->mac_stats.ul.poor_sched_blocks / UE->mac_stats.ul.total_sched_blocks;
+    	printf("sched_blocks %d, poor_blocks %d\n", UE->mac_stats.ul.total_sched_blocks, UE->mac_stats.ul.poor_sched_blocks);
+    	UE->mac_stats.ul.poor_sched_blocks = 0;
+    	UE->mac_stats.ul.total_sched_blocks = 0;
+    }  
+    float prate_filter = 0.9;
+    UE->mac_stats.ul.prate = prate_filter * UE->mac_stats.ul.prate  + (1 - prate_filter) * poor_sched_rate;
+    rd->poor_sched_rate = UE->mac_stats.ul.prate;
     ++i;
   }
 
