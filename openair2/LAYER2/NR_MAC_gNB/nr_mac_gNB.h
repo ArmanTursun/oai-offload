@@ -641,6 +641,9 @@ typedef struct NR_mac_dir_stats {
   uint32_t current_rbs;
   uint32_t current_tbs;
   uint32_t current_demand;
+  uint32_t total_sched_blocks;
+  uint32_t poor_sched_blocks;
+  float prate;
 } NR_mac_dir_stats_t;
 
 
@@ -863,6 +866,8 @@ typedef struct gNB_MAC_INST_s {
   pthread_mutex_t sched_lock;
   
   uint16_t max_prb;
+  
+  float prate;
 
 } gNB_MAC_INST;
 
