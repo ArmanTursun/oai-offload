@@ -371,8 +371,8 @@ void init_gNB_Tpool(int inst) {
   // ULSCH decoding threadpool
   //initTpool("-1,-1,-1,-1", &gNB->threadPool, cpumeas(CPUMEAS_GETSTATE));
   //initTpool("9,11", &gNB->threadPool, cpumeas(CPUMEAS_GETSTATE));
-  //initTpool(get_softmodem_params()->threadPoolConfig, &gNB->threadPool_LDPC_de, cpumeas(CPUMEAS_GETSTATE));
-  initTpool("1,3,5,7", &gNB->threadPool, cpumeas(CPUMEAS_GETSTATE));
+  initTpool(get_softmodem_params()->threadPoolConfig, &gNB->threadPool, cpumeas(CPUMEAS_GETSTATE));
+  //initTpool("1,3,5,7", &gNB->threadPool, cpumeas(CPUMEAS_GETSTATE));
   // ULSCH decoder result FIFO
   initNotifiedFIFO(&gNB->respPuschSymb);
   initNotifiedFIFO(&gNB->respDecode);
