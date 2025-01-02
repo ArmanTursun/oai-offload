@@ -106,7 +106,7 @@ bool read_mac_sm(void* data)
         
     if (UE->mac_stats.ul.total_sched_blocks > 0){
     	poor_sched_rate = (float)UE->mac_stats.ul.poor_sched_blocks / UE->mac_stats.ul.total_sched_blocks;
-    	printf("sched_blocks %d, poor_blocks %d\n", UE->mac_stats.ul.total_sched_blocks, UE->mac_stats.ul.poor_sched_blocks);
+    	//printf("sched_blocks %d, poor_blocks %d\n", UE->mac_stats.ul.total_sched_blocks, UE->mac_stats.ul.poor_sched_blocks);
     	UE->mac_stats.ul.poor_sched_blocks = 0;
     	UE->mac_stats.ul.total_sched_blocks = 0;
     }  
