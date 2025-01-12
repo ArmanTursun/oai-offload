@@ -1932,8 +1932,8 @@ static void pf_ul(module_id_t module_id,
     while (rbStart + max_rbSize < bwpSize && (rballoc_mask[rbStart + max_rbSize] & slbitmap) == slbitmap)
       max_rbSize++;
 
-    if (nrmac->max_prb > 0 && max_rbSize > nrmac->max_prb)
-    	max_rbSize = nrmac->max_prb;
+    //if (nrmac->max_prb > 0 && max_rbSize > nrmac->max_prb)
+    //	max_rbSize = nrmac->max_prb;
     if (rbStart + min_rb >= bwpSize || max_rbSize < min_rb) {
       LOG_D(NR_MAC, "[UE %04x][%4d.%2d] could not allocate UL data: no resources (rbStart %d, min_rb %d, bwpSize %d)\n",
             iterator->UE->rnti,

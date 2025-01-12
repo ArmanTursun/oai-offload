@@ -1055,14 +1055,14 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
       
       gNB->ulsch[ULSCH_id].ldpc_offload = false;
       //clock_gettime(CLOCK_REALTIME, &start_time_topsis);
-      gNB->ldpc_offload = 0.3;
+      //gNB->ldpc_offload = 0.3;
       if (gNB->ldpc_offload == 0){
       	gNB->ulsch[ULSCH_id].ldpc_offload = false;
 	//gNB->ldpc_offload = 0.5;
       }else{
-      gNB->ulsch[ULSCH_id].ldpc_offload = topsis(results[2][1], results[0][1], results[3][1], results[1][1], 1.0 - gNB->ldpc_offload, gNB->ldpc_offload) == 0 ? false : true;
+      gNB->ulsch[ULSCH_id].ldpc_offload = topsis(results[2][1], results[0][1], results[3][1], results[1][1], 1.0 - 0.8, 0.8) == 0 ? false : true;
       }
-      //printf("offload weight: %f, offload: %d\n", gNB->ldpc_offload, gNB->ulsch[ULSCH_id].ldpc_offload ? 1 : 0);
+      printf("TBS: %d, MCS: %d, SNR: %f, weight: %f, offload: %d\n", (int)features[0], (int)features[1], features[2], gNB->ldpc_offload, gNB->ulsch[ULSCH_id].ldpc_offload ? 1 : 0);
       //clock_gettime(CLOCK_REALTIME, &end_time_topsis);
       //latency_topsis = end_time_topsis.tv_nsec / 1000.0 - start_time_topsis.tv_nsec / 1000.0; 
 
@@ -1135,15 +1135,15 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
       //printf("tbs: %u, energy: %f\n", pdu->pusch_data.tb_size << 3, pusch_pdu->pusch_latency);
       //pusch_pdu->pusch_latency = (double)(pusch_pdu->out - pusch_pdu->in) / (get_cpu_freq_GHz() * 1000.0);
       
-      FILE *file = fopen("/home/nakaolab/mcs_prb/ldpc.csv", "a");
-      if (file == NULL) {
-        fprintf(stderr, "Error opening file.\n");
-        exit(EXIT_FAILURE);
-      }
+      //FILE *file = fopen("/home/nakaolab/mcs_prb/ldpc.csv", "a");
+      //if (file == NULL) {
+      //  fprintf(stderr, "Error opening file.\n");
+      //  exit(EXIT_FAILURE);
+      //}
       //fprintf(file, "%u,%u,%u,%u,%u,%u,%u,%u,%f,%f,%llu\n", pdu->pusch_data.tb_size << 3, pdu->mcs_index, pdu->qam_mod_order, pdu->target_code_rate, pdu->rb_size, pdu->nr_of_symbols, pdu->nb_dmrs_prb, pdu->nrOfLayers, SNRtimes10 / 10.0, pdu->pusch_latency, (unsigned long long)rdtsc_oai());
-      fprintf(file, "%u,%u,%f,%u,%f,%u,%u,%f,%d,%llu\n", pdu->pusch_data.tb_size << 3, pdu->mcs_index, SNRtimes10 / 10.0, pdu->rb_size, (float)pdu->mcs_table, pdu->qam_mod_order, pdu->target_code_rate, gNB->ldpc_offload, gNB->ulsch[ULSCH_id].ldpc_offload ? 1:0, (unsigned long long)rdtsc_oai());
+      //fprintf(file, "%u,%u,%f,%u,%f,%u,%u,%f,%d,%llu\n", pdu->pusch_data.tb_size << 3, pdu->mcs_index, SNRtimes10 / 10.0, pdu->rb_size, (float)pdu->mcs_table, pdu->qam_mod_order, pdu->target_code_rate, gNB->ldpc_offload, gNB->ulsch[ULSCH_id].ldpc_offload ? 1:0, (unsigned long long)rdtsc_oai());
       //fprintf(file, "%d,%f,%f,%f,%f\n", gNB->ulsch[ULSCH_id].ldpc_offload ? 1:0, results[2][1], results[3][1], results[0][1], results[1][1]);
-      fclose(file);
+      //fclose(file);
       
     }
   }
